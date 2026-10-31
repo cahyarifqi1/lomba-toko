@@ -133,12 +133,12 @@ const store = {
   set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
   del: (k) => { try { localStorage.removeItem(k); } catch {} },
 };
-const S = {id: store.get('lomba_id'), pw: store.get('lomba_pw'), role: null, cfg: null, juri: '', mine: {},
+const S = {id: store.get('lomba_id'), pw: store.get('lomba_pw'), role: null, cfg: null, juri: store.get('lomba_juri'), mineOnly: true, mine: {},
   ranking: null, tab: 'ranking', query: '', onlyTodo: false, open: new Set(), timer: null, scroll: 0};
 
 async function api(action, extra = {}) {
   let res;
-  try { res = await fetch('/api', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({action, id: S.id, pw: S.pw, ...extra})}); }
+  try { res = await fetch('/api', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({action, id: S.id, pw: S.pw, juri: S.juri, ...extra})}); }
   catch { throw new Error('Tidak ada koneksi internet. Coba lagi.'); }
   let data = {}; try { data = await res.json(); } catch {}
   if (!res.ok) { const e = new Error(data.error || 'Terjadi kesalahan (' + res.status + ')'); e.status = res.status; throw e; }
@@ -180,37 +180,52 @@ function showLogin(error) {
 }
 async function bootstrap() {
   const d = await api('load');
-  S.role = d.role; S.cfg = d.config; S.mine = d.mine || {}; S.juri = d.name || ''; document.title = S.cfg.title; route();
+  S.role = d.role; S.cfg = d.config; S.mine = d.mine || {}; if (S.role === 'juri' && !S.cfg.juri.includes(S.juri)) S.juri = ''; document.title = S.cfg.title; route();
 }
 function route() {
-  if (S.role === 'admin') { setTab(S.tab); startAuto(); refresh(); } else showJuriHome();
+  if (S.role === 'admin') { setTab(S.tab); startAuto(); refresh(); } else if (S.juri) showJuriHome(); else showJuriPick();
 }
-function logout() { store.del('lomba_id'); store.del('lomba_pw'); S.id = ''; S.pw = ''; S.role = null; showLogin(); }
+function logout() { store.del('lomba_id'); store.del('lomba_pw'); store.del('lomba_juri'); S.juri = ''; S.id = ''; S.pw = ''; S.role = null; showLogin(); }
 
 /* ---------- Juri ---------- */
+function showJuriPick() {
+  app.innerHTML = band(`<div class="row2"><h1>Pilih nama Anda</h1><button class="link" id="out">Keluar</button></div><p class="sub">Pilih nama juri sebelum mulai menilai.</p>`) +
+    `<div class="wrap">${S.cfg.juri.map((j, i) => `<button class="pick" data-i="${i}">${esc(j)}</button>`).join('')}</div>`;
+  $('#out').onclick = logout;
+  app.querySelectorAll('.pick').forEach((b) => b.onclick = async () => {
+    S.juri = S.cfg.juri[+b.dataset.i]; store.set('lomba_juri', S.juri); S.mineOnly = true;
+    try { const d = await api('load'); S.mine = d.mine || {}; S.cfg = d.config; showJuriHome(); } catch (e) { toast(e.message, true); }
+  });
+}
+const myId = () => (S.cfg.accounts.find((a) => a.name === S.juri) || {}).id;
+const mineStores = () => S.cfg.stores.filter((s) => s.juri.includes(myId()));
 function showJuriHome() {
-  const total = S.cfg.stores.length, done = S.cfg.stores.filter(isDone).length;
+  const my = mineStores(), pool = S.mineOnly && my.length ? my : S.cfg.stores;
+  const total = pool.length, done = pool.filter((s) => isDone(s.name)).length;
   app.innerHTML = band(`<div class="row2"><div><h1>${esc(S.cfg.title)}</h1>
-      <p class="sub">Juri: <b>${esc(S.juri)}</b></p></div><button class="link" id="out">Keluar</button></div>
+      <p class="sub">Juri: <b>${esc(S.juri)}</b> <button class="link" id="chg">ganti</button></p></div><button class="link" id="out">Keluar</button></div>
     <div class="prog"><div class="bar"><i style="width:${total ? done / total * 100 : 0}%"></i></div><span>${done}/${total}</span></div>`) +
     `<div class="wrap"><div class="sticky"><input id="q" type="search" placeholder="Cari nama toko…" value="${esc(S.query)}">
+    ${my.length ? `<label class="chk"><input type="checkbox" id="mine" ${S.mineOnly ? 'checked' : ''}> Hanya toko bagian saya (${my.length} toko)</label>` : ''}
     <label class="chk"><input type="checkbox" id="todo" ${S.onlyTodo ? 'checked' : ''}> Tampilkan yang belum dinilai saja</label></div><div id="list"></div></div>`;
   $('#out').onclick = logout;
+  $('#chg').onclick = () => { S.juri = ''; store.del('lomba_juri'); showJuriPick(); };
   $('#q').oninput = (e) => { S.query = e.target.value; renderStoreList(); };
   $('#todo').onchange = (e) => { S.onlyTodo = e.target.checked; renderStoreList(); };
+  if ($('#mine')) $('#mine').onchange = (e) => { S.mineOnly = e.target.checked; S.scroll = 0; showJuriHome(); };
   renderStoreList(); window.scrollTo(0, S.scroll);
 }
 function renderStoreList() {
-  const q = S.query.trim().toLowerCase();
-  const items = S.cfg.stores.map((s, i) => ({s, i})).filter(({s}) => (!q || s.toLowerCase().includes(q)) && (!S.onlyTodo || !isDone(s)));
+  const q = S.query.trim().toLowerCase(), mine = S.mineOnly && mineStores().length > 0, id = myId();
+  const items = S.cfg.stores.map((o, i) => ({s: o.name, i, o})).filter(({s, o}) => (!mine || o.juri.includes(id)) && (!q || s.toLowerCase().includes(q)) && (!S.onlyTodo || !isDone(s)));
   $('#list').innerHTML = items.length ? items.map(({s, i}) => {
     const avg = isDone(s) ? finalOf(S.mine[s].nilai, S.cfg.areas) : null;
     return `<button class="store ${avg !== null ? 'done' : ''}" data-i="${i}"><b>${esc(s)}</b>${avg !== null ? `<span>✓ ${fmt(avg)}</span>` : '<em>Belum dinilai</em>'}</button>`;
-  }).join('') : `<p class="empty">${S.cfg.stores.length ? 'Tidak ada toko yang cocok.' : 'Belum ada toko yang dibagikan ke Anda. Hubungi admin.'}</p>`;
+  }).join('') : '<p class="empty">Tidak ada toko yang cocok.</p>';
   $('#list').querySelectorAll('.store').forEach((b) => b.onclick = () => { S.scroll = window.scrollY; showScoring(+b.dataset.i); });
 }
 function showScoring(i) {
-  const name = S.cfg.stores[i], areas = S.cfg.areas, total = qCount(areas), dk = 'lomba_draft_' + S.juri + '_' + name;
+  const name = S.cfg.stores[i].name, areas = S.cfg.areas, total = qCount(areas), dk = 'lomba_draft_' + S.juri + '_' + name;
   let vals = (S.mine[name] || {}).nilai;
   if (!vals || vals.length !== total) { try { const d = JSON.parse(store.get(dk) || 'null'); vals = Array.isArray(d) && d.length === total ? d : null; } catch { vals = null; } }
   vals = vals ? vals.slice() : Array(total).fill(0);
@@ -293,7 +308,7 @@ function updateRanking() {
       <div class="chips">${R.areas.map((a, k) => `<span>${esc(a)}: <b style="color:${scale(j.areaAvg[k])}">${fmt(j.areaAvg[k])}</b></span>`).join('')}</div></div>`).join('') : '<p class="empty" style="padding:8px 0">Belum ada nilai.</p>'}</div>` : '';
     return `<div class="rrow"><button class="rhead" data-s="${esc(r.store)}"><span class="rk ${rk}">${r.rank ?? '–'}</span>
       <span class="rm"><span class="rn">${esc(r.store)}</span><span class="rb"><i style="width:${r.avg ? r.avg * 10 : 0}%"></i></span></span>
-      <span class="rc">${r.count ? esc(r.juriName || '') : 'Belum dinilai'}</span><span class="rv">${r.avg === null ? '–' : fmt(r.avg)}</span></button>${detail}</div>`;
+      <span class="rc">${r.expected > 1 ? r.count + '/' + r.expected + ' juri' : (r.count ? esc(r.juriName || '') : 'Belum dinilai')}</span><span class="rv">${r.avg === null ? '–' : fmt(r.avg)}</span></button>${detail}</div>`;
   }).join('') : '<p class="empty">Tidak ada toko yang cocok.</p>';
   $('#rows').querySelectorAll('.rhead').forEach((b) => b.onclick = () => { const s = b.dataset.s; S.open.has(s) ? S.open.delete(s) : S.open.add(s); updateRanking(); });
 }
@@ -349,7 +364,7 @@ async function downloadXlsx() {
 }
 
 function parseAccounts(lines) {
-  return lines.map((l) => l.trim()).filter(Boolean).map((l) => { const p = l.split(','); return {id: (p[0] || '').trim(), password: (p[1] || '').trim(), name: p.slice(2).join(',').trim()}; });
+  return lines.map((l) => l.trim()).filter(Boolean).map((l) => { const p = l.split(','); return {id: (p[0] || '').trim(), name: p.slice(1).join(',').trim()}; });
 }
 function parseAreas(text) {
   const areas = []; let a = null, g = '';
@@ -364,7 +379,7 @@ function parseAreas(text) {
 function areasToText(areas) {
   return areas.map((a) => { let out = '# ' + a.name, g = null; for (const q of a.qs) { if ((q.g || '') !== g) { g = q.g || ''; if (g) out += '\n## ' + g; } out += '\n' + q.t; } return out; }).join('\n\n');
 }
-const parseStores = (lines) => lines.map((l) => l.trim()).filter(Boolean).map((l) => { const p = l.split(/\t|\|/); return {name: (p[0] || '').trim(), juri: (p[1] || '').trim().toLowerCase()}; });
+const parseStores = (lines) => lines.map((l) => l.trim()).filter(Boolean).map((l) => { const p = l.split(/\t|\|/); return {name: (p[0] || '').trim(), juri: (p[1] || '').toLowerCase().split(/[\s,;]+/).filter(Boolean)}; });
 function renderSettings() {
   const c = S.cfg;
   $('#body').innerHTML = `
@@ -372,17 +387,20 @@ function renderSettings() {
     <label for="s-areas">Area &amp; pertanyaan</label>
     <textarea id="s-areas" style="min-height:300px" spellcheck="false">${esc(areasToText(c.areas))}</textarea>
     <p class="hint"># Nama area (satu baris, diawali #) · ## Sub-judul (opsional) · baris lain = satu pertanyaan, dinilai 1–10. Nilai akhir toko = rata-rata nilai tiap area.</p>
-    <label for="s-juri">Akun juri (1 baris = 1 juri: id, kata sandi, nama)</label>
-    <textarea id="s-juri" style="min-height:150px" spellcheck="false">${esc((c.accounts || []).map((a) => [a.id, a.password, a.name].join(', ')).join('\n'))}</textarea>
-    <label for="s-stores">Daftar toko dan juri penanggung jawab (1 baris: nama toko | id juri)</label>
-    <textarea id="s-stores" style="min-height:240px" spellcheck="false">${esc(c.stores.map((s) => s.name + (s.juri ? ' | ' + s.juri : '')).join('\n'))}</textarea>
+    <label for="s-lid">ID login juri (dipakai bersama oleh semua juri)</label><input id="s-lid" autocapitalize="off" value="${esc((c.login || {}).id || '')}">
+    <label for="s-lpw">Kata sandi juri</label><input id="s-lpw" autocapitalize="off" value="${esc((c.login || {}).password || '')}">
+    <label for="s-juri">Daftar juri (1 baris = 1 juri: kode, nama)</label>
+    <textarea id="s-juri" style="min-height:150px" spellcheck="false">${esc((c.accounts || []).map((a) => a.id + ', ' + a.name).join('\n'))}</textarea>
+    <p class="hint">Kode dipakai untuk membagi toko (kolom kanan daftar toko). Juri memilih namanya sendiri setelah login.</p>
+    <label for="s-stores">Daftar toko dan juri penanggung jawab (1 baris: nama toko | kode juri; kalau dinilai 2 juri, tulis 2 kode, mis. juri1, juri2)</label>
+    <textarea id="s-stores" style="min-height:240px" spellcheck="false">${esc(c.stores.map((s) => s.name + (s.juri.length ? ' | ' + s.juri.join(', ') : '')).join('\n'))}</textarea>
     <div class="tools" style="margin-top:8px"><button class="ghost" id="auto" type="button">Bagi rata otomatis</button></div>
     <p class="hint" id="cnt"></p>
     <p class="hint">Bisa tempel dari Excel (2 kolom: nama toko, id juri). Atur semuanya sebelum juri mulai menilai. Jangan mengubah nama toko, nama juri, atau struktur pertanyaan setelah ada nilai masuk.</p>
     <p class="err" id="serr"></p><button class="primary" id="ssave" style="width:100%;margin-top:8px">Simpan pengaturan</button>`;
   const lines = (id) => $(id).value.split('\n');
   const count = () => {
-    const per = {}; let none = 0; parseStores(lines('#s-stores')).forEach((s) => s.juri ? per[s.juri] = (per[s.juri] || 0) + 1 : none++);
+    const per = {}; let none = 0; parseStores(lines('#s-stores')).forEach((s) => s.juri.length ? s.juri.forEach((j) => per[j] = (per[j] || 0) + 1) : none++);
     $('#cnt').textContent = 'Pembagian: ' + (Object.entries(per).map(([k, v]) => k + ' ' + v + ' toko').join(' · ') || '-') + (none ? ' · BELUM DIBAGI: ' + none : '');
   };
   count(); $('#s-stores').oninput = count;
@@ -395,7 +413,7 @@ function renderSettings() {
   $('#ssave').onclick = async () => {
     const btn = $('#ssave'); btn.disabled = true; btn.textContent = 'Menyimpan…';
     try {
-      const d = await api('saveConfig', {config: {title: $('#s-title').value, areas: parseAreas($('#s-areas').value), accounts: parseAccounts(lines('#s-juri')), stores: parseStores(lines('#s-stores'))}});
+      const d = await api('saveConfig', {config: {title: $('#s-title').value, areas: parseAreas($('#s-areas').value), login: {id: $('#s-lid').value, password: $('#s-lpw').value}, accounts: parseAccounts(lines('#s-juri')), stores: parseStores(lines('#s-stores'))}});
       S.cfg = d.config; document.title = S.cfg.title; toast('Pengaturan tersimpan'); refresh(); renderSettings();
     } catch (e) { $('#serr').textContent = e.message; btn.disabled = false; btn.textContent = 'Simpan pengaturan'; }
   };
