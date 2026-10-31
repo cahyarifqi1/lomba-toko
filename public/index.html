@@ -154,7 +154,7 @@ const finalOf = (nilai, areas) => {
   let p = 0; const m = areas.map((a) => { const s = nilai.slice(p, p + a.qs.length); p += a.qs.length; return s.reduce((x, y) => x + y, 0) / s.length; });
   return m.reduce((x, y) => x + y, 0) / m.length;
 };
-const isDone = (s) => finalOf((S.mine[s] || {}).nilai, S.cfg.areas) !== null;
+const isDone = (s) => !!S.mine[s];
 const band = (inner) => `<div class="band"><div class="wrap">${inner}</div></div>`;
 
 /* ---------- Login ---------- */
@@ -219,10 +219,13 @@ function renderStoreList() {
   const q = S.query.trim().toLowerCase(), mine = S.mineOnly && mineStores().length > 0, id = myId();
   const items = S.cfg.stores.map((o, i) => ({s: o.name, i, o})).filter(({s, o}) => (!mine || o.juri.includes(id)) && (!q || s.toLowerCase().includes(q)) && (!S.onlyTodo || !isDone(s)));
   $('#list').innerHTML = items.length ? items.map(({s, i}) => {
-    const avg = isDone(s) ? finalOf(S.mine[s].nilai, S.cfg.areas) : null;
-    return `<button class="store ${avg !== null ? 'done' : ''}" data-i="${i}"><b>${esc(s)}</b>${avg !== null ? `<span>✓ ${fmt(avg)}</span>` : '<em>Belum dinilai</em>'}</button>`;
+    const d = isDone(s);
+    return `<button class="store ${d ? 'done' : ''}" data-i="${i}"><b>${esc(s)}</b>${d ? '<span>✓ Terkirim</span>' : '<em>Belum dinilai</em>'}</button>`;
   }).join('') : '<p class="empty">Tidak ada toko yang cocok.</p>';
-  $('#list').querySelectorAll('.store').forEach((b) => b.onclick = () => { S.scroll = window.scrollY; showScoring(+b.dataset.i); });
+  $('#list').querySelectorAll('.store').forEach((b) => b.onclick = () => {
+    if (isDone(S.cfg.stores[+b.dataset.i].name)) return toast('Sudah terkirim dan terkunci. Hubungi admin bila perlu diubah.', true);
+    S.scroll = window.scrollY; showScoring(+b.dataset.i);
+  });
 }
 function showScoring(i) {
   const name = S.cfg.stores[i].name, areas = S.cfg.areas, total = qCount(areas), dk = 'lomba_draft_' + S.juri + '_' + name;
@@ -242,14 +245,14 @@ function showScoring(i) {
     p += a.qs.length; return out;
   }).join('');
   app.innerHTML = band(`<button class="link" id="back">‹ Kembali</button><h1 style="margin-top:6px;font-size:1.7rem">${esc(name)}</h1>`) +
-    `<div class="wrap">${secs}</div><div class="savebar"><div class="wrap"><div><small id="lbl">Terisi</small><b id="avg">–</b></div><button class="primary" id="save" disabled>Simpan nilai</button></div></div>`;
+    `<div class="wrap">${secs}</div><div class="savebar"><div class="wrap"><div><small id="lbl">Terisi</small><b id="avg">–</b></div><button class="primary" id="save" disabled>Kirim nilai</button></div></div>`;
   window.scrollTo(0, 0);
   const update = () => {
     let st = 0;
     areas.forEach((a, ai) => { const sl = vals.slice(st, st + a.qs.length); $('#c' + ai).textContent = sl.filter(Boolean).length + '/' + a.qs.length; st += a.qs.length; });
     vals.forEach((v, idx) => { const e = $('#v' + idx); e.textContent = v || '–'; e.style.color = v ? scale(v) : 'var(--mute)'; });
     const n = vals.filter(Boolean).length, full = n === total;
-    $('#lbl').textContent = full ? 'Nilai akhir' : 'Terisi'; $('#avg').textContent = full ? fmt(finalOf(vals, areas)) : n + '/' + total; $('#save').disabled = !full;
+    $('#lbl').textContent = 'Terisi'; $('#avg').textContent = n + '/' + total; $('#save').disabled = !full;
   };
   app.querySelectorAll('.n').forEach((b) => { const idx = +b.dataset.i; if (vals[idx] === +b.dataset.n) b.classList.add('on'); b.onclick = () => {
     vals[idx] = +b.dataset.n; app.querySelectorAll(`.n[data-i="${idx}"]`).forEach((x) => x.classList.toggle('on', x === b));
@@ -257,9 +260,10 @@ function showScoring(i) {
   update();
   $('#back').onclick = showJuriHome;
   $('#save').onclick = async () => {
+    if (!confirm('Yakin kirim nilai untuk ' + name + '?\n\nSetelah dikirim, nilai tidak bisa diubah lagi.')) return;
     const btn = $('#save'); btn.disabled = true; btn.textContent = 'Menyimpan…';
-    try { const d = await api('submit', {store: name, nilai: vals}); S.mine[name] = d.saved; store.del(dk); showJuriHome(); toast('Tersimpan: ' + name); }
-    catch (e) { toast(e.message, true); btn.disabled = false; btn.textContent = 'Simpan nilai'; }
+    try { const d = await api('submit', {store: name, nilai: vals}); S.mine[name] = d.saved; store.del(dk); showJuriHome(); toast('Terkirim: ' + name); }
+    catch (e) { toast(e.message, true); btn.disabled = false; btn.textContent = 'Kirim nilai'; }
   };
 }
 
@@ -305,11 +309,15 @@ function updateRanking() {
   $('#rows').innerHTML = rows.length ? rows.map((r) => {
     const open = S.open.has(r.store), rk = r.rank && r.rank <= 3 ? 'rk' + r.rank : '';
     const detail = open ? `<div class="detail">${r.juri.length ? r.juri.map((j) => `<div class="jl"><div><span>${esc(j.juri)}</span><span>${fmt(j.avg)}</span></div>
-      <div class="chips">${R.areas.map((a, k) => `<span>${esc(a)}: <b style="color:${scale(j.areaAvg[k])}">${fmt(j.areaAvg[k])}</b></span>`).join('')}</div></div>`).join('') : '<p class="empty" style="padding:8px 0">Belum ada nilai.</p>'}</div>` : '';
+      <div class="chips">${R.areas.map((a, k) => `<span>${esc(a)}: <b style="color:${scale(j.areaAvg[k])}">${fmt(j.areaAvg[k])}</b></span>`).join('')}</div><button class="link unl" data-j="${esc(j.juri)}" data-s="${esc(r.store)}">Buka kunci (hapus nilai ini)</button></div>`).join('') : '<p class="empty" style="padding:8px 0">Belum ada nilai.</p>'}</div>` : '';
     return `<div class="rrow"><button class="rhead" data-s="${esc(r.store)}"><span class="rk ${rk}">${r.rank ?? '–'}</span>
       <span class="rm"><span class="rn">${esc(r.store)}</span><span class="rb"><i style="width:${r.avg ? r.avg * 10 : 0}%"></i></span></span>
       <span class="rc">${r.expected > 1 ? r.count + '/' + r.expected + ' juri' : (r.count ? esc(r.juriName || '') : 'Belum dinilai')}</span><span class="rv">${r.avg === null ? '–' : fmt(r.avg)}</span></button>${detail}</div>`;
   }).join('') : '<p class="empty">Tidak ada toko yang cocok.</p>';
+  $('#rows').querySelectorAll('.unl').forEach((b) => b.onclick = async () => {
+    if (!confirm('Buka kunci?\n\nNilai ' + b.dataset.j + ' untuk toko ' + b.dataset.s + ' akan DIHAPUS dan juri harus mengisi ulang.')) return;
+    try { await api('unlock', {who: b.dataset.j, store: b.dataset.s}); toast('Kunci dibuka'); refresh(); } catch (e) { toast(e.message, true); }
+  });
   $('#rows').querySelectorAll('.rhead').forEach((b) => b.onclick = () => { const s = b.dataset.s; S.open.has(s) ? S.open.delete(s) : S.open.add(s); updateRanking(); });
 }
 function updateJuri() {
