@@ -404,19 +404,34 @@ async function downloadXlsx() {
       ws.views = [{state: 'frozen', ySplit: 1, xSplit: 2}]; ws.autoFilter = {from: {row: 1, column: 1}, to: {row: 1, column: ws.columnCount}};
     };
     const ws = wb.addWorksheet('Ranking');
-    ws.columns = [{header: 'Peringkat', width: 11}, {header: 'Toko', width: 32}, {header: 'Juri penilai', width: 18}, {header: 'Nilai akhir', width: 12}, ...R.areas.map((a) => ({header: a, width: 14}))];
+    ws.columns = [{header: 'Peringkat', width: 11}, {header: 'Toko', width: 32}, {header: 'Juri penilai', width: 18}, ...R.areas.map((a) => ({header: a, width: 14})), {header: 'NILAI AKHIR', width: 15}];
     const medal = {1: 'FFD4A017', 2: 'FF8D9AA3', 3: 'FFA9683A'};
     for (const r of R.rows) {
-      const row = ws.addRow([r.rank ?? '', r.store, r.juriName || '', r.avg ?? '', ...R.areas.map((_, k) => (r.areaAvg ? r.areaAvg[k] : ''))]);
+      const row = ws.addRow([r.rank ?? '', r.store, r.juriName || '', ...R.areas.map((_, k) => (r.areaAvg ? r.areaAvg[k] : null)), r.avg ?? null]);
       row.eachCell((c, n) => { if (n !== 2 && n !== 3) c.alignment = {horizontal: 'center'}; if (n >= 4) c.numFmt = '0.00'; });
-      row.getCell(4).font = {bold: true};
+      const fc = row.getCell(4 + R.areas.length); fc.font = {bold: true, size: 12}; fc.fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: 'FFFFF4CC'}}; fc.border = {left: {style: 'medium', color: {argb: 'FFB8860B'}}}; fc.numFmt = '0.00'; fc.alignment = {horizontal: 'center'};
       if (r.rank && r.rank <= 3) { row.getCell(1).fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: medal[r.rank]}}; row.getCell(1).font = {bold: true, color: {argb: 'FFFFFFFF'}}; }
     }
+    const totRow = (sheet, label, labelCol, c1, c2, lastRow, valOf) => {
+      const tot = sheet.getRow(lastRow + 2);
+      for (let c = 1; c <= c2; c++) { const cell = tot.getCell(c); cell.font = {bold: true}; cell.fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: 'FFDFF1ED'}}; cell.border = {top: {style: 'medium', color: {argb: 'FF0A3D3A'}}}; }
+      tot.getCell(labelCol).value = label;
+      for (let c = c1; c <= c2; c++) {
+        const v = valOf(c).filter((x) => x !== null && x !== undefined), L = sheet.getColumn(c).letter, cell = tot.getCell(c);
+        cell.value = {formula: `AVERAGE(${L}2:${L}${lastRow})`, result: v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0};
+        cell.numFmt = '0.00'; cell.alignment = {horizontal: 'center'};
+      }
+    };
+    totRow(ws, 'RATA-RATA SELURUHNYA (' + R.rows.filter((r) => r.avg !== null).length + ' toko dinilai)', 2, 4, 4 + R.areas.length, ws.rowCount,
+      (c) => R.rows.map((r) => (c === 4 + R.areas.length ? r.avg : (r.areaAvg ? r.areaAvg[c - 4] : null))));
+    const tc = ws.getRow(ws.rowCount).getCell(4 + R.areas.length); tc.fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: 'FFFFE08A'}}; tc.font = {bold: true, size: 12};
     style(ws);
+    ws.getRow(1).getCell(4 + R.areas.length).fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: 'FFB8860B'}};
     const wd = wb.addWorksheet('Semua jawaban');
     wd.columns = [{header: 'Toko', width: 32}, {header: 'Juri', width: 18}, ...R.qlabels.map((l) => ({header: l, width: 14}))];
     for (const r of R.rows.slice().sort((a, b) => a.store.localeCompare(b.store, 'id', {numeric: true})))
       for (const j of r.juri) { const row = wd.addRow([r.store, j.juri, ...j.nilai]); row.eachCell((c, n) => { if (n > 2) c.alignment = {horizontal: 'center'}; }); }
+    totRow(wd, 'RATA-RATA', 1, 3, 2 + R.qlabels.length, wd.rowCount, (c) => R.rows.flatMap((r) => r.juri.map((j) => j.nilai[c - 3])));
     style(wd); wd.getRow(1).height = 90;
     const buf = await wb.xlsx.writeBuffer();
     const a = document.createElement('a');
