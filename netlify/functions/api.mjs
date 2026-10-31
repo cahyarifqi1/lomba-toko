@@ -85,7 +85,7 @@ export default async (req) => {
   switch (b.action) {
     case "load": {
       const out = { role, config: pub(cfg, role) };
-      if (me) out.mine = (await db.get(key(me.name), { type: "json" })) || {};
+      if (me) { const m = (await db.get(key(me.name), { type: "json" })) || {}; out.mine = Object.fromEntries(Object.entries(m).map(([k, v]) => [k, { ts: v.ts }])); }
       return json(out);
     }
     case "submit": {
@@ -96,9 +96,10 @@ export default async (req) => {
       if (!Array.isArray(n) || n.length !== qCount(cfg.areas) || !n.every((x) => Number.isInteger(x) && x >= 1 && x <= 10))
         return json({ error: "Isi semua pertanyaan dengan nilai 1–10" }, 400);
       const k = key(me.name), mine = (await db.get(k, { type: "json" })) || {};
+      if (mine[b.store]) return json({ error: "Nilai toko ini sudah dikirim dan terkunci. Hubungi admin untuk membuka." }, 409);
       mine[b.store] = { nilai: n, ts: Date.now() };
       await db.setJSON(k, mine);
-      return json({ ok: true, saved: mine[b.store] });
+      return json({ ok: true, saved: { ts: mine[b.store].ts } });
     }
     case "ranking": {
       if (role !== "admin") return json({ error: "Khusus admin" }, 403);
@@ -164,6 +165,16 @@ export default async (req) => {
       const next = { schema: 2, title: String(c.title || DEF.title).trim().slice(0, 100), areas, stores, accounts, login: { id: lid, password: lpw } };
       await db.setJSON("config", next);
       return json({ ok: true, config: pub(next, "admin") });
+    }
+    case "unlock": {
+      if (role !== "admin") return json({ error: "Khusus admin" }, 403);
+      const acc = cfg.accounts.find((a) => a.name === b.who);
+      if (!acc) return json({ error: "Juri tidak dikenali" }, 400);
+      const k = key(acc.name), mine = (await db.get(k, { type: "json" })) || {};
+      if (!mine[b.store]) return json({ error: "Nilai tidak ditemukan" }, 404);
+      delete mine[b.store];
+      await db.setJSON(k, mine);
+      return json({ ok: true });
     }
     default: return json({ error: "Aksi tidak dikenal" }, 400);
   }
