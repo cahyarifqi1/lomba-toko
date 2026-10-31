@@ -27,7 +27,7 @@ const randPw = () => { const ch = "abcdefghjkmnpqrstuvwxyz23456789"; return Arra
 
 function assignBlocks(names, accounts) {
   const size = Math.ceil(names.length / Math.max(accounts.length, 1));
-  return names.map((name, i) => ({ name, juri: accounts[Math.min(Math.floor(i / size), accounts.length - 1)]?.id || "" }));
+  return names.map((name, i) => ({ name, juri: [accounts[Math.min(Math.floor(i / size), accounts.length - 1)]?.id].filter(Boolean) }));
 }
 function score(nilai, areas) {
   if (!Array.isArray(nilai) || nilai.length !== qCount(areas)) return null;
@@ -50,17 +50,21 @@ async function getConfig(db) {
     c.accounts = names.map((name, i) => ({ id: "juri" + (i + 1), password: randPw(), name }));
     changed = true;
   }
+  if (!c.login) { c.login = { id: "juri", password: randPw() }; changed = true; }
+  c.accounts = c.accounts.map((a) => ({ id: a.id, name: a.name }));
   if (c.schema !== 2) {
     const nm = (c.stores || DEF.stores).map((s) => (typeof s === "string" ? s : s.name));
     c.areas = DEF.areas; c.stores = assignBlocks(nm, c.accounts); c.schema = 2; changed = true;
   }
-  c = { schema: 2, title: c.title || DEF.title, areas: c.areas, stores: c.stores, accounts: c.accounts };
+  c.stores = c.stores.map((s) => ({ name: s.name, juri: Array.isArray(s.juri) ? s.juri : s.juri ? [s.juri] : [] }));
+  c = { schema: 2, title: c.title || DEF.title, areas: c.areas, stores: c.stores, accounts: c.accounts, login: c.login };
   if (changed) await db.setJSON("config", c);
   return c;
 }
-const pub = (c, role, myId) => role === "admin"
-  ? { title: c.title, areas: c.areas, stores: c.stores, accounts: c.accounts, juri: c.accounts.map((a) => a.name) }
-  : { title: c.title, areas: c.areas, stores: c.stores.filter((s) => s.juri === myId).map((s) => s.name), juri: [] };
+const pub = (c, role) => ({
+  title: c.title, areas: c.areas, stores: c.stores, accounts: c.accounts, juri: c.accounts.map((a) => a.name),
+  ...(role === "admin" ? { login: c.login } : {}),
+});
 
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Gunakan POST" }, 405);
@@ -74,18 +78,19 @@ export default async (req) => {
   const id = String(b.id ?? "").trim().toLowerCase(), pw = String(b.pw ?? "").trim();
   let role = null, me = null;
   if (id === "admin") { if (pw === ADMIN) role = "admin"; }
-  else { const u = cfg.accounts.find((a) => a.id.toLowerCase() === id); if (u && u.password === pw) { role = "juri"; me = u; } }
+  else if (id === cfg.login.id.toLowerCase() && pw === cfg.login.password) { role = "juri"; me = cfg.accounts.find((a) => a.name === b.juri) || null; }
   if (!role) { await sleep(600); return json({ error: "ID atau kata sandi salah." }, 401); }
 
   switch (b.action) {
     case "load": {
-      const out = { role, name: me?.name || "", config: pub(cfg, role, me?.id) };
-      if (role === "juri") out.mine = (await db.get(key(me.name), { type: "json" })) || {};
+      const out = { role, config: pub(cfg, role) };
+      if (me) out.mine = (await db.get(key(me.name), { type: "json" })) || {};
       return json(out);
     }
     case "submit": {
       if (role !== "juri") return json({ error: "Hanya juri yang bisa menilai" }, 403);
-      if (!cfg.stores.some((s) => s.name === b.store && s.juri === me.id)) return json({ error: "Toko ini bukan bagian Anda" }, 400);
+      if (!me) return json({ error: "Pilih nama juri dulu" }, 400);
+      if (!cfg.stores.some((s) => s.name === b.store)) return json({ error: "Toko tidak dikenali" }, 400);
       const n = b.nilai;
       if (!Array.isArray(n) || n.length !== qCount(cfg.areas) || !n.every((x) => Number.isInteger(x) && x >= 1 && x <= 10))
         return json({ error: "Isi semua pertanyaan dengan nilai 1–10" }, 400);
@@ -105,7 +110,7 @@ export default async (req) => {
           if (sc) per.push({ juri: a.name, nilai: e.nilai, areaAvg: sc.areaAvg.map(r2), avg: r2(sc.avg), raw: sc.avg });
         }
         return {
-          store: s.name, juriName: cfg.accounts.find((a) => a.id === s.juri)?.name || "", count: per.length,
+          store: s.name, juriName: cfg.accounts.filter((a) => s.juri.includes(a.id)).map((a) => a.name).join(", "), expected: s.juri.length, count: per.length,
           avg: per.length ? r2(mean(per.map((p) => p.raw))) : null,
           areaAvg: per.length ? cfg.areas.map((_, k) => r2(mean(per.map((p) => p.areaAvg[k])))) : null,
           juri: per.map(({ raw, ...p }) => p),
@@ -115,26 +120,27 @@ export default async (req) => {
       let rank = 0, prev = null;
       rows.forEach((r, i) => { if (r.avg === null) { r.rank = null; return; } if (r.avg !== prev) { rank = i + 1; prev = r.avg; } r.rank = rank; });
       const progress = cfg.accounts.map((a) => {
-        const mine = cfg.stores.filter((s) => s.juri === a.id);
+        const mine = cfg.stores.filter((s) => s.juri.includes(a.id));
         return { name: a.name, total: mine.length, done: mine.filter((s) => score(all[a.name][s.name]?.nilai, cfg.areas)).length };
       });
       const qlabels = cfg.areas.flatMap((a) => a.qs.map((q) => `${a.name} – ${q.g ? q.g + ": " : ""}${q.t}`));
-      return json({ rows, progress, total: cfg.stores.length, assigned: cfg.stores.filter((s) => s.juri).length, areas: cfg.areas.map((a) => a.name), qlabels, updated: Date.now() });
+      return json({ rows, progress, total: cfg.stores.length, assigned: cfg.stores.reduce((n, x) => n + x.juri.length, 0), areas: cfg.areas.map((a) => a.name), qlabels, updated: Date.now() });
     }
     case "saveConfig": {
       if (role !== "admin") return json({ error: "Khusus admin" }, 403);
       const c = b.config || {}, accounts = [], ids = new Set(), nm = new Set();
       for (const a of Array.isArray(c.accounts) ? c.accounts.slice(0, 30) : []) {
-        const aid = String(a.id ?? "").trim().toLowerCase(), apw = String(a.password ?? "").trim();
-        const name = String(a.name ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
-        if (!aid && !apw && !name) continue;
-        if (!/^[a-z0-9._-]{2,30}$/.test(aid) || aid === "admin") return json({ error: `ID "${aid}" tidak valid (2-30 huruf kecil/angka, tanpa spasi, bukan "admin")` }, 400);
-        if (apw.length < 3 || apw.length > 40) return json({ error: `Kata sandi untuk "${aid}" harus 3-40 karakter` }, 400);
-        if (!name) return json({ error: `Nama untuk "${aid}" belum diisi` }, 400);
-        if (ids.has(aid) || nm.has(name.toLowerCase())) return json({ error: `ID atau nama juri ganda: "${aid}" / "${name}"` }, 400);
-        ids.add(aid); nm.add(name.toLowerCase()); accounts.push({ id: aid, password: apw, name });
+        const aid = String(a.id ?? "").trim().toLowerCase(), name = String(a.name ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
+        if (!aid && !name) continue;
+        if (!/^[a-z0-9._-]{1,30}$/.test(aid)) return json({ error: `Kode juri "${aid}" tidak valid (huruf kecil/angka, tanpa spasi)` }, 400);
+        if (!name) return json({ error: `Nama untuk kode "${aid}" belum diisi` }, 400);
+        if (ids.has(aid) || nm.has(name.toLowerCase())) return json({ error: `Kode atau nama juri ganda: "${aid}" / "${name}"` }, 400);
+        ids.add(aid); nm.add(name.toLowerCase()); accounts.push({ id: aid, name });
       }
-      if (!accounts.length) return json({ error: "Minimal 1 akun juri" }, 400);
+      if (!accounts.length) return json({ error: "Minimal 1 juri" }, 400);
+      const lid = String(c.login?.id ?? "").trim().toLowerCase(), lpw = String(c.login?.password ?? "").trim();
+      if (!/^[a-z0-9._-]{2,30}$/.test(lid) || lid === "admin") return json({ error: 'ID login juri tidak valid (huruf kecil/angka, bukan "admin")' }, 400);
+      if (lpw.length < 3 || lpw.length > 40) return json({ error: "Kata sandi juri harus 3-40 karakter" }, 400);
       const areas = [];
       for (const a of Array.isArray(c.areas) ? c.areas.slice(0, 10) : []) {
         const name = String(a.name ?? "").trim().slice(0, 60);
@@ -147,14 +153,14 @@ export default async (req) => {
       if (qCount(areas) > 120) return json({ error: "Maksimal 120 pertanyaan" }, 400);
       const stores = [], seen = new Set();
       for (const s of Array.isArray(c.stores) ? c.stores.slice(0, 300) : []) {
-        const name = String(s.name ?? "").trim().replace(/\s+/g, " ").slice(0, 80), j = String(s.juri ?? "").trim().toLowerCase();
+        const name = String(s.name ?? "").trim().replace(/\s+/g, " ").slice(0, 80), js = [...new Set((Array.isArray(s.juri) ? s.juri : [s.juri]).map((x) => String(x ?? "").trim().toLowerCase()).filter(Boolean))];
         if (!name) continue;
         if (seen.has(name.toLowerCase())) return json({ error: `Nama toko ganda: "${name}"` }, 400);
-        if (j && !ids.has(j)) return json({ error: `Toko "${name}" memakai ID juri "${j}" yang tidak ada` }, 400);
-        seen.add(name.toLowerCase()); stores.push({ name, juri: j });
+        for (const j of js) if (!ids.has(j)) return json({ error: `Toko "${name}" memakai ID juri "${j}" yang tidak ada` }, 400);
+        seen.add(name.toLowerCase()); stores.push({ name, juri: js });
       }
       if (!stores.length) return json({ error: "Minimal 1 toko" }, 400);
-      const next = { schema: 2, title: String(c.title || DEF.title).trim().slice(0, 100), areas, stores, accounts };
+      const next = { schema: 2, title: String(c.title || DEF.title).trim().slice(0, 100), areas, stores, accounts, login: { id: lid, password: lpw } };
       await db.setJSON("config", next);
       return json({ ok: true, config: pub(next, "admin") });
     }
