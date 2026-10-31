@@ -407,8 +407,9 @@ function renderSettings() {
   $('#auto').onclick = () => {
     const ids = parseAccounts(lines('#s-juri')).map((a) => a.id).filter(Boolean), names = parseStores(lines('#s-stores')).map((s) => s.name).filter(Boolean);
     if (!ids.length || !names.length) return toast('Isi akun juri dan daftar toko dulu', true);
-    const size = Math.ceil(names.length / ids.length);
-    $('#s-stores').value = names.map((n, i) => n + ' | ' + ids[Math.min(Math.floor(i / size), ids.length - 1)]).join('\n'); count();
+    const base = Math.floor(names.length / ids.length), extra = names.length % ids.length, own = [];
+    ids.forEach((_, j) => { for (let t = 0; t < base + (j < extra ? 1 : 0); t++) own.push(j); });
+    $('#s-stores').value = names.map((n, i) => n + ' | ' + ids[own[i]]).join('\n'); count();
   };
   $('#ssave').onclick = async () => {
     const btn = $('#ssave'); btn.disabled = true; btn.textContent = 'Menyimpan…';
