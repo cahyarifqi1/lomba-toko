@@ -53,13 +53,14 @@ export default async (req) => {
     return json({ error: "Permintaan tidak valid" }, 400);
   }
 
-  const ADMIN = (Netlify.env.get("ADMIN_PIN") || "").trim();
-  const JURI = (Netlify.env.get("JURI_CODE") || "").trim();
+  const ADMIN = String(Netlify.env.get("ADMIN_PIN") || process.env.ADMIN_PIN || "").trim();
+  const JURI = String(Netlify.env.get("JURI_CODE") || process.env.JURI_CODE || "").trim();
   if (!ADMIN || !JURI) {
     return json(
       {
         error:
-          "ADMIN_PIN dan JURI_CODE belum diatur di Netlify (Site configuration → Environment variables), lalu deploy ulang.",
+          `Kode belum terbaca server. ADMIN_PIN: ${ADMIN ? "ada" : "KOSONG"}, JURI_CODE: ${JURI ? "ada" : "KOSONG"}. ` +
+          "Isi variabel yang KOSONG di Netlify (Environment variables), lalu pastikan ada deploy baru sesudahnya.",
       },
       500
     );
