@@ -26,8 +26,9 @@ const qCount = (areas) => areas.reduce((n, a) => n + a.qs.length, 0);
 const randPw = () => { const ch = "abcdefghjkmnpqrstuvwxyz23456789"; return Array.from(crypto.getRandomValues(new Uint8Array(6)), (n) => ch[n % ch.length]).join(""); };
 
 function assignBlocks(names, accounts) {
-  const size = Math.ceil(names.length / Math.max(accounts.length, 1));
-  return names.map((name, i) => ({ name, juri: [accounts[Math.min(Math.floor(i / size), accounts.length - 1)]?.id].filter(Boolean) }));
+  const m = Math.max(accounts.length, 1), base = Math.floor(names.length / m), extra = names.length % m, own = [];
+  for (let j = 0; j < m; j++) for (let t = 0; t < base + (j < extra ? 1 : 0); t++) own.push(j);
+  return names.map((name, i) => ({ name, juri: [accounts[own[i]]?.id].filter(Boolean) }));
 }
 function score(nilai, areas) {
   if (!Array.isArray(nilai) || nilai.length !== qCount(areas)) return null;
