@@ -1,151 +1,163 @@
 import { getStore } from "@netlify/blobs";
 
+const mk = (g, n, label) => Array.from({ length: n }, (_, i) => ({ g, t: `${label} – pertanyaan ${i + 1}` }));
 const DEF = {
   title: "Lomba Kebersihan & Kerapihan Toko",
-  areas: ["Area depan & parkir", "Area penjualan & display", "Kasir", "Gudang", "Toilet & area belakang"],
   juri: Array.from({ length: 8 }, (_, i) => `Juri ${i + 1}`),
   stores: Array.from({ length: 95 }, (_, i) => `Toko ${i + 1}`),
+  areas: [
+    { name: "Gudang", qs: [
+      ...mk("Penataan barang", 4, "Penataan barang"), ...mk("Kondisi barang & harga", 4, "Kondisi barang & harga"),
+      ...mk("Kebersihan", 4, "Kebersihan"), ...mk("Lorong, kasir & kenyamanan", 4, "Lorong, kasir & kenyamanan")] },
+    { name: "Toilet", qs: mk("", 8, "Toilet") },
+    { name: "Area parkir", qs: mk("", 4, "Area parkir") },
+    { name: "Pelayanan", qs: mk("", 4, "Pelayanan") },
+    { name: "Grooming", qs: mk("", 4, "Grooming") },
+  ],
 };
 
-const json = (data, status = 200) =>
-  new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
 const r2 = (n) => Math.round(n * 100) / 100;
 const key = (name) => "juri:" + encodeURIComponent(name);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const randPw = () => {
-  const ch = "abcdefghjkmnpqrstuvwxyz23456789";
-  return Array.from(crypto.getRandomValues(new Uint8Array(6)), (n) => ch[n % ch.length]).join("");
-};
+const qCount = (areas) => areas.reduce((n, a) => n + a.qs.length, 0);
+const randPw = () => { const ch = "abcdefghjkmnpqrstuvwxyz23456789"; return Array.from(crypto.getRandomValues(new Uint8Array(6)), (n) => ch[n % ch.length]).join(""); };
 
+function assignBlocks(names, accounts) {
+  const size = Math.ceil(names.length / Math.max(accounts.length, 1));
+  return names.map((name, i) => ({ name, juri: accounts[Math.min(Math.floor(i / size), accounts.length - 1)]?.id || "" }));
+}
+function score(nilai, areas) {
+  if (!Array.isArray(nilai) || nilai.length !== qCount(areas)) return null;
+  let p = 0;
+  const areaAvg = areas.map((a) => { const sl = nilai.slice(p, p + a.qs.length); p += a.qs.length; return mean(sl); });
+  return { areaAvg, avg: mean(areaAvg) };
+}
 function cleanList(v, max, maxLen = 80) {
   if (!Array.isArray(v)) return [];
   const seen = new Set(), out = [];
-  for (const x of v) {
-    const t = String(x).trim().replace(/\s+/g, " ").slice(0, maxLen);
-    if (t && !seen.has(t.toLowerCase())) { seen.add(t.toLowerCase()); out.push(t); }
-  }
+  for (const x of v) { const t = String(x).trim().replace(/\s+/g, " ").slice(0, maxLen); if (t && !seen.has(t.toLowerCase())) { seen.add(t.toLowerCase()); out.push(t); } }
   return out.slice(0, max);
 }
 
 async function getConfig(db) {
-  let c = await db.get("config", { type: "json" });
-  let changed = false;
+  let c = await db.get("config", { type: "json" }), changed = false;
   if (!c) { c = {}; changed = true; }
   if (!Array.isArray(c.accounts)) {
     const names = Array.isArray(c.juri) && c.juri.length ? c.juri.map((x) => (typeof x === "string" ? x : x.name)) : DEF.juri;
     c.accounts = names.map((name, i) => ({ id: "juri" + (i + 1), password: randPw(), name }));
     changed = true;
   }
-  c = { title: c.title || DEF.title, areas: c.areas || DEF.areas, stores: c.stores || DEF.stores, accounts: c.accounts };
+  if (c.schema !== 2) {
+    const nm = (c.stores || DEF.stores).map((s) => (typeof s === "string" ? s : s.name));
+    c.areas = DEF.areas; c.stores = assignBlocks(nm, c.accounts); c.schema = 2; changed = true;
+  }
+  c = { schema: 2, title: c.title || DEF.title, areas: c.areas, stores: c.stores, accounts: c.accounts };
   if (changed) await db.setJSON("config", c);
   return c;
 }
-
-const pub = (c, role) => ({
-  title: c.title, areas: c.areas, stores: c.stores,
-  juri: role === "admin" ? c.accounts.map((a) => a.name) : [],
-  ...(role === "admin" ? { accounts: c.accounts } : {}),
-});
+const pub = (c, role, myId) => role === "admin"
+  ? { title: c.title, areas: c.areas, stores: c.stores, accounts: c.accounts, juri: c.accounts.map((a) => a.name) }
+  : { title: c.title, areas: c.areas, stores: c.stores.filter((s) => s.juri === myId).map((s) => s.name), juri: [] };
 
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Gunakan POST" }, 405);
   let b;
   try { b = await req.json(); } catch { return json({ error: "Permintaan tidak valid" }, 400); }
-
   const ADMIN = String(Netlify.env.get("ADMIN_PIN") || process.env.ADMIN_PIN || "").trim();
   if (!ADMIN) return json({ error: "ADMIN_PIN belum diatur di Netlify (Environment variables), lalu deploy ulang." }, 500);
 
   const db = getStore({ name: "lomba", consistency: "strong" });
   const cfg = await getConfig(db);
-
-  const id = String(b.id ?? "").trim().toLowerCase();
-  const pw = String(b.pw ?? "").trim();
+  const id = String(b.id ?? "").trim().toLowerCase(), pw = String(b.pw ?? "").trim();
   let role = null, me = null;
   if (id === "admin") { if (pw === ADMIN) role = "admin"; }
-  else {
-    const u = cfg.accounts.find((a) => a.id.toLowerCase() === id);
-    if (u && u.password === pw) { role = "juri"; me = u.name; }
-  }
+  else { const u = cfg.accounts.find((a) => a.id.toLowerCase() === id); if (u && u.password === pw) { role = "juri"; me = u; } }
   if (!role) { await sleep(600); return json({ error: "ID atau kata sandi salah." }, 401); }
-
-  const names = cfg.accounts.map((a) => a.name);
 
   switch (b.action) {
     case "load": {
-      const out = { role, name: me, config: pub(cfg, role) };
-      if (role === "juri") out.mine = (await db.get(key(me), { type: "json" })) || {};
+      const out = { role, name: me?.name || "", config: pub(cfg, role, me?.id) };
+      if (role === "juri") out.mine = (await db.get(key(me.name), { type: "json" })) || {};
       return json(out);
     }
-
     case "submit": {
       if (role !== "juri") return json({ error: "Hanya juri yang bisa menilai" }, 403);
-      if (!cfg.stores.includes(b.store)) return json({ error: "Toko tidak dikenali" }, 400);
+      if (!cfg.stores.some((s) => s.name === b.store && s.juri === me.id)) return json({ error: "Toko ini bukan bagian Anda" }, 400);
       const n = b.nilai;
-      if (!Array.isArray(n) || n.length !== cfg.areas.length || !n.every((x) => Number.isInteger(x) && x >= 1 && x <= 10))
-        return json({ error: "Isi nilai 1–10 untuk semua area" }, 400);
-      const k = key(me);
-      const mine = (await db.get(k, { type: "json" })) || {};
+      if (!Array.isArray(n) || n.length !== qCount(cfg.areas) || !n.every((x) => Number.isInteger(x) && x >= 1 && x <= 10))
+        return json({ error: "Isi semua pertanyaan dengan nilai 1–10" }, 400);
+      const k = key(me.name), mine = (await db.get(k, { type: "json" })) || {};
       mine[b.store] = { nilai: n, ts: Date.now() };
       await db.setJSON(k, mine);
       return json({ ok: true, saved: mine[b.store] });
     }
-
     case "ranking": {
       if (role !== "admin") return json({ error: "Khusus admin" }, 403);
       const all = {};
-      await Promise.all(names.map(async (j) => { all[j] = (await db.get(key(j), { type: "json" })) || {}; }));
+      await Promise.all(cfg.accounts.map(async (a) => { all[a.name] = (await db.get(key(a.name), { type: "json" })) || {}; }));
       const rows = cfg.stores.map((s) => {
         const per = [];
-        for (const j of names) {
-          const e = all[j][s];
-          if (e && Array.isArray(e.nilai) && e.nilai.length) per.push({ juri: j, nilai: e.nilai, avg: r2(mean(e.nilai)), raw: mean(e.nilai) });
+        for (const a of cfg.accounts) {
+          const e = all[a.name][s.name], sc = e && score(e.nilai, cfg.areas);
+          if (sc) per.push({ juri: a.name, nilai: e.nilai, areaAvg: sc.areaAvg.map(r2), avg: r2(sc.avg), raw: sc.avg });
         }
-        return { store: s, count: per.length, avg: per.length ? r2(mean(per.map((p) => p.raw))) : null, juri: per.map(({ raw, ...p }) => p) };
+        return {
+          store: s.name, juriName: cfg.accounts.find((a) => a.id === s.juri)?.name || "", count: per.length,
+          avg: per.length ? r2(mean(per.map((p) => p.raw))) : null,
+          areaAvg: per.length ? cfg.areas.map((_, k) => r2(mean(per.map((p) => p.areaAvg[k])))) : null,
+          juri: per.map(({ raw, ...p }) => p),
+        };
       });
       rows.sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1) || b.count - a.count || a.store.localeCompare(b.store, "id", { numeric: true }));
       let rank = 0, prev = null;
-      rows.forEach((r, i) => {
-        if (r.avg === null) { r.rank = null; return; }
-        if (r.avg !== prev) { rank = i + 1; prev = r.avg; }
-        r.rank = rank;
+      rows.forEach((r, i) => { if (r.avg === null) { r.rank = null; return; } if (r.avg !== prev) { rank = i + 1; prev = r.avg; } r.rank = rank; });
+      const progress = cfg.accounts.map((a) => {
+        const mine = cfg.stores.filter((s) => s.juri === a.id);
+        return { name: a.name, total: mine.length, done: mine.filter((s) => score(all[a.name][s.name]?.nilai, cfg.areas)).length };
       });
-      const progress = names.map((j) => ({ name: j, done: cfg.stores.filter((s) => all[j][s]).length }));
-      return json({ rows, progress, total: cfg.stores.length, areas: cfg.areas, updated: Date.now() });
+      const qlabels = cfg.areas.flatMap((a) => a.qs.map((q) => `${a.name} – ${q.g ? q.g + ": " : ""}${q.t}`));
+      return json({ rows, progress, total: cfg.stores.length, assigned: cfg.stores.filter((s) => s.juri).length, areas: cfg.areas.map((a) => a.name), qlabels, updated: Date.now() });
     }
-
     case "saveConfig": {
       if (role !== "admin") return json({ error: "Khusus admin" }, 403);
-      const c = b.config || {};
-      const accounts = [], ids = new Set(), nm = new Set();
+      const c = b.config || {}, accounts = [], ids = new Set(), nm = new Set();
       for (const a of Array.isArray(c.accounts) ? c.accounts.slice(0, 30) : []) {
-        const aid = String(a.id ?? "").trim().toLowerCase();
-        const apw = String(a.password ?? "").trim();
+        const aid = String(a.id ?? "").trim().toLowerCase(), apw = String(a.password ?? "").trim();
         const name = String(a.name ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
         if (!aid && !apw && !name) continue;
         if (!/^[a-z0-9._-]{2,30}$/.test(aid) || aid === "admin") return json({ error: `ID "${aid}" tidak valid (2-30 huruf kecil/angka, tanpa spasi, bukan "admin")` }, 400);
         if (apw.length < 3 || apw.length > 40) return json({ error: `Kata sandi untuk "${aid}" harus 3-40 karakter` }, 400);
         if (!name) return json({ error: `Nama untuk "${aid}" belum diisi` }, 400);
         if (ids.has(aid) || nm.has(name.toLowerCase())) return json({ error: `ID atau nama juri ganda: "${aid}" / "${name}"` }, 400);
-        ids.add(aid); nm.add(name.toLowerCase());
-        accounts.push({ id: aid, password: apw, name });
+        ids.add(aid); nm.add(name.toLowerCase()); accounts.push({ id: aid, password: apw, name });
       }
-      const next = {
-        title: String(c.title || DEF.title).trim().slice(0, 100),
-        areas: cleanList(c.areas, 12),
-        stores: cleanList(c.stores, 300),
-        accounts,
-      };
-      if (!next.areas.length) return json({ error: "Minimal 1 area penilaian" }, 400);
-      if (!next.accounts.length) return json({ error: "Minimal 1 akun juri" }, 400);
-      if (!next.stores.length) return json({ error: "Minimal 1 toko" }, 400);
+      if (!accounts.length) return json({ error: "Minimal 1 akun juri" }, 400);
+      const areas = [];
+      for (const a of Array.isArray(c.areas) ? c.areas.slice(0, 10) : []) {
+        const name = String(a.name ?? "").trim().slice(0, 60);
+        const qs = (Array.isArray(a.qs) ? a.qs : []).map((q) => ({ g: String(q.g ?? "").trim().slice(0, 60), t: String(q.t ?? "").trim().slice(0, 160) })).filter((q) => q.t);
+        if (!name) return json({ error: "Ada area tanpa nama (baris yang diawali #)" }, 400);
+        if (!qs.length) return json({ error: `Area "${name}" belum punya pertanyaan` }, 400);
+        areas.push({ name, qs });
+      }
+      if (!areas.length) return json({ error: "Minimal 1 area dengan pertanyaan" }, 400);
+      if (qCount(areas) > 120) return json({ error: "Maksimal 120 pertanyaan" }, 400);
+      const stores = [], seen = new Set();
+      for (const s of Array.isArray(c.stores) ? c.stores.slice(0, 300) : []) {
+        const name = String(s.name ?? "").trim().replace(/\s+/g, " ").slice(0, 80), j = String(s.juri ?? "").trim().toLowerCase();
+        if (!name) continue;
+        if (seen.has(name.toLowerCase())) return json({ error: `Nama toko ganda: "${name}"` }, 400);
+        if (j && !ids.has(j)) return json({ error: `Toko "${name}" memakai ID juri "${j}" yang tidak ada` }, 400);
+        seen.add(name.toLowerCase()); stores.push({ name, juri: j });
+      }
+      if (!stores.length) return json({ error: "Minimal 1 toko" }, 400);
+      const next = { schema: 2, title: String(c.title || DEF.title).trim().slice(0, 100), areas, stores, accounts };
       await db.setJSON("config", next);
       return json({ ok: true, config: pub(next, "admin") });
     }
-
-    default:
-      return json({ error: "Aksi tidak dikenal" }, 400);
+    default: return json({ error: "Aksi tidak dikenal" }, 400);
   }
 };
-
 export const config = { path: "/api" };
