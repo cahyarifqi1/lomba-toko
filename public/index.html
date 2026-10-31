@@ -108,6 +108,16 @@ label{display:block;font-weight:600;margin:14px 0 6px}
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:12px;font-weight:600;z-index:9;max-width:90%;text-align:center}
 .toast.bad{background:var(--warn)}
 @media (prefers-reduced-motion:no-preference){.bar i,.rb i{transition:width .4s}}
+.ar{background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:12px;overflow:hidden}
+.ar summary{display:flex;justify-content:space-between;align-items:center;padding:16px 14px;font-family:var(--h);font-weight:800;font-size:1.1rem;cursor:pointer;list-style:none}
+.ar summary::-webkit-details-marker{display:none}
+.ar summary em{font-style:normal;font-family:"Plus Jakarta Sans",sans-serif;font-size:.85rem;font-weight:600;color:var(--mute);background:#e8eeea;border-radius:99px;padding:3px 10px}
+.ar[open] summary{background:var(--accl);color:var(--deep)}
+.grp{padding:12px 14px 4px;font-weight:800;color:var(--acc);font-size:.8rem;text-transform:uppercase;letter-spacing:.04em}
+.q{padding:12px 14px;border-top:1px solid var(--line)}
+.qt{display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;font-weight:600}
+.qt b{font-family:var(--h);font-size:1.4rem;min-width:2ch;text-align:right}
+.q .n{height:46px}
 </style>
 </head>
 <body>
@@ -138,6 +148,13 @@ function toast(msg, bad) {
   const t = document.createElement('div'); t.className = 'toast' + (bad ? ' bad' : ''); t.textContent = msg;
   document.body.appendChild(t); setTimeout(() => t.remove(), 2800);
 }
+const qCount = (areas) => areas.reduce((n, a) => n + a.qs.length, 0);
+const finalOf = (nilai, areas) => {
+  if (!nilai || nilai.length !== qCount(areas)) return null;
+  let p = 0; const m = areas.map((a) => { const s = nilai.slice(p, p + a.qs.length); p += a.qs.length; return s.reduce((x, y) => x + y, 0) / s.length; });
+  return m.reduce((x, y) => x + y, 0) / m.length;
+};
+const isDone = (s) => finalOf((S.mine[s] || {}).nilai, S.cfg.areas) !== null;
 const band = (inner) => `<div class="band"><div class="wrap">${inner}</div></div>`;
 
 /* ---------- Login ---------- */
@@ -172,7 +189,7 @@ function logout() { store.del('lomba_id'); store.del('lomba_pw'); S.id = ''; S.p
 
 /* ---------- Juri ---------- */
 function showJuriHome() {
-  const total = S.cfg.stores.length, done = S.cfg.stores.filter((s) => S.mine[s]).length;
+  const total = S.cfg.stores.length, done = S.cfg.stores.filter(isDone).length;
   app.innerHTML = band(`<div class="row2"><div><h1>${esc(S.cfg.title)}</h1>
       <p class="sub">Juri: <b>${esc(S.juri)}</b></p></div><button class="link" id="out">Keluar</button></div>
     <div class="prog"><div class="bar"><i style="width:${total ? done / total * 100 : 0}%"></i></div><span>${done}/${total}</span></div>`) +
@@ -185,35 +202,48 @@ function showJuriHome() {
 }
 function renderStoreList() {
   const q = S.query.trim().toLowerCase();
-  const items = S.cfg.stores.map((s, i) => ({s, i})).filter(({s}) => (!q || s.toLowerCase().includes(q)) && (!S.onlyTodo || !S.mine[s]));
+  const items = S.cfg.stores.map((s, i) => ({s, i})).filter(({s}) => (!q || s.toLowerCase().includes(q)) && (!S.onlyTodo || !isDone(s)));
   $('#list').innerHTML = items.length ? items.map(({s, i}) => {
-    const m = S.mine[s], avg = m ? m.nilai.reduce((a, b) => a + b, 0) / m.nilai.length : null;
-    return `<button class="store ${m ? 'done' : ''}" data-i="${i}"><b>${esc(s)}</b>${m ? `<span>✓ ${fmt(avg)}</span>` : '<em>Belum dinilai</em>'}</button>`;
-  }).join('') : '<p class="empty">Tidak ada toko yang cocok.</p>';
+    const avg = isDone(s) ? finalOf(S.mine[s].nilai, S.cfg.areas) : null;
+    return `<button class="store ${avg !== null ? 'done' : ''}" data-i="${i}"><b>${esc(s)}</b>${avg !== null ? `<span>✓ ${fmt(avg)}</span>` : '<em>Belum dinilai</em>'}</button>`;
+  }).join('') : `<p class="empty">${S.cfg.stores.length ? 'Tidak ada toko yang cocok.' : 'Belum ada toko yang dibagikan ke Anda. Hubungi admin.'}</p>`;
   $('#list').querySelectorAll('.store').forEach((b) => b.onclick = () => { S.scroll = window.scrollY; showScoring(+b.dataset.i); });
 }
 function showScoring(i) {
-  const name = S.cfg.stores[i], areas = S.cfg.areas;
-  const vals = areas.map((_, k) => (S.mine[name]?.nilai || [])[k] || 0);
+  const name = S.cfg.stores[i], areas = S.cfg.areas, total = qCount(areas), dk = 'lomba_draft_' + S.juri + '_' + name;
+  let vals = (S.mine[name] || {}).nilai;
+  if (!vals || vals.length !== total) { try { const d = JSON.parse(store.get(dk) || 'null'); vals = Array.isArray(d) && d.length === total ? d : null; } catch { vals = null; } }
+  vals = vals ? vals.slice() : Array(total).fill(0);
+  const firstOpen = areas.findIndex((a, ai) => { const st = areas.slice(0, ai).reduce((n, x) => n + x.qs.length, 0); return vals.slice(st, st + a.qs.length).some((v) => !v); });
+  let p = 0;
+  const secs = areas.map((a, ai) => {
+    let g = null, body = '';
+    a.qs.forEach((q, k) => {
+      const idx = p + k;
+      if ((q.g || '') !== g) { g = q.g || ''; if (g) body += `<div class="grp">${esc(g)}</div>`; }
+      body += `<div class="q"><div class="qt"><span>${esc(q.t)}</span><b id="v${idx}">–</b></div><div class="grid">${[1,2,3,4,5,6,7,8,9,10].map((n) => `<button type="button" class="n" style="--c:${scale(n)}" data-i="${idx}" data-n="${n}">${n}</button>`).join('')}</div></div>`;
+    });
+    const out = `<details class="ar" ${(firstOpen === -1 ? ai === 0 : ai === firstOpen) ? 'open' : ''}><summary><span>${esc(a.name)}</span><em id="c${ai}"></em></summary>${body}</details>`;
+    p += a.qs.length; return out;
+  }).join('');
   app.innerHTML = band(`<button class="link" id="back">‹ Kembali</button><h1 style="margin-top:6px;font-size:1.7rem">${esc(name)}</h1>`) +
-    `<div class="wrap">${areas.map((a, k) => `<section class="area"><div class="areahead"><span>${esc(a)}</span><b class="val" id="v${k}" style="color:${vals[k] ? scale(vals[k]) : 'var(--mute)'}">${vals[k] || '–'}</b></div>
-      <div class="grid">${[1,2,3,4,5,6,7,8,9,10].map((n) => `<button type="button" class="n ${vals[k] === n ? 'on' : ''}" style="--c:${scale(n)}" data-k="${k}" data-n="${n}">${n}</button>`).join('')}</div></section>`).join('')}</div>
-    <div class="savebar"><div class="wrap"><div><small>Nilai akhir</small><b id="avg">–</b></div><button class="primary" id="save" disabled>Simpan nilai</button></div></div>`;
+    `<div class="wrap">${secs}</div><div class="savebar"><div class="wrap"><div><small id="lbl">Terisi</small><b id="avg">–</b></div><button class="primary" id="save" disabled>Simpan nilai</button></div></div>`;
   window.scrollTo(0, 0);
   const update = () => {
-    const full = vals.every((v) => v > 0);
-    $('#avg').textContent = full ? fmt(vals.reduce((a, b) => a + b, 0) / vals.length) : '–'; $('#save').disabled = !full;
+    let st = 0;
+    areas.forEach((a, ai) => { const sl = vals.slice(st, st + a.qs.length); $('#c' + ai).textContent = sl.filter(Boolean).length + '/' + a.qs.length; st += a.qs.length; });
+    vals.forEach((v, idx) => { const e = $('#v' + idx); e.textContent = v || '–'; e.style.color = v ? scale(v) : 'var(--mute)'; });
+    const n = vals.filter(Boolean).length, full = n === total;
+    $('#lbl').textContent = full ? 'Nilai akhir' : 'Terisi'; $('#avg').textContent = full ? fmt(finalOf(vals, areas)) : n + '/' + total; $('#save').disabled = !full;
   };
+  app.querySelectorAll('.n').forEach((b) => { const idx = +b.dataset.i; if (vals[idx] === +b.dataset.n) b.classList.add('on'); b.onclick = () => {
+    vals[idx] = +b.dataset.n; app.querySelectorAll(`.n[data-i="${idx}"]`).forEach((x) => x.classList.toggle('on', x === b));
+    store.set(dk, JSON.stringify(vals)); update(); }; });
   update();
-  app.querySelectorAll('.n').forEach((b) => b.onclick = () => {
-    const k = +b.dataset.k, n = +b.dataset.n; vals[k] = n;
-    const v = $('#v' + k); v.textContent = n; v.style.color = scale(n);
-    app.querySelectorAll(`.n[data-k="${k}"]`).forEach((x) => x.classList.toggle('on', +x.dataset.n === n)); update();
-  });
   $('#back').onclick = showJuriHome;
   $('#save').onclick = async () => {
     const btn = $('#save'); btn.disabled = true; btn.textContent = 'Menyimpan…';
-    try { const d = await api('submit', {juri: S.juri, store: name, nilai: vals}); S.mine[name] = d.saved; showJuriHome(); toast('Tersimpan: ' + name); }
+    try { const d = await api('submit', {store: name, nilai: vals}); S.mine[name] = d.saved; store.del(dk); showJuriHome(); toast('Tersimpan: ' + name); }
     catch (e) { toast(e.message, true); btn.disabled = false; btn.textContent = 'Simpan nilai'; }
   };
 }
@@ -247,10 +277,9 @@ async function refresh(manual) {
 function updateRanking() {
   const R = S.ranking; if (!$('#rows')) return;
   if (!R) { $('#rows').innerHTML = '<p class="empty">Memuat…</p>'; return; }
-  const jc = S.cfg.juri.length, filled = R.rows.reduce((a, r) => a + r.count, 0);
-  const rated = R.rows.filter((r) => r.count > 0), top = rated.length ? rated[0].avg : null;
+  const filled = R.rows.reduce((a, r) => a + r.count, 0), rated = R.rows.filter((r) => r.count > 0), top = rated.length ? rated[0].avg : null;
   $('#stats').innerHTML = `<div class="stat"><b>${rated.length}/${R.total}</b><small>Toko sudah dinilai</small></div>
-    <div class="stat"><b>${filled}/${R.total * jc}</b><small>Penilaian masuk</small></div>
+    <div class="stat"><b>${filled}/${R.assigned}</b><small>Penilaian masuk</small></div>
     <div class="stat"><b>${top === null ? '–' : fmt(top)}</b><small>Nilai tertinggi</small></div>`;
   const q = S.query.trim().toLowerCase();
   const pods = q ? [] : R.rows.filter((r) => r.rank && r.rank <= 3).slice(0, 3);
@@ -261,10 +290,10 @@ function updateRanking() {
   $('#rows').innerHTML = rows.length ? rows.map((r) => {
     const open = S.open.has(r.store), rk = r.rank && r.rank <= 3 ? 'rk' + r.rank : '';
     const detail = open ? `<div class="detail">${r.juri.length ? r.juri.map((j) => `<div class="jl"><div><span>${esc(j.juri)}</span><span>${fmt(j.avg)}</span></div>
-      <div class="chips">${R.areas.map((a, k) => `<span>${esc(a)}: <b style="color:${scale(j.nilai[k])}">${j.nilai[k] ?? '–'}</b></span>`).join('')}</div></div>`).join('') : '<p class="empty" style="padding:8px 0">Belum ada nilai.</p>'}</div>` : '';
+      <div class="chips">${R.areas.map((a, k) => `<span>${esc(a)}: <b style="color:${scale(j.areaAvg[k])}">${fmt(j.areaAvg[k])}</b></span>`).join('')}</div></div>`).join('') : '<p class="empty" style="padding:8px 0">Belum ada nilai.</p>'}</div>` : '';
     return `<div class="rrow"><button class="rhead" data-s="${esc(r.store)}"><span class="rk ${rk}">${r.rank ?? '–'}</span>
       <span class="rm"><span class="rn">${esc(r.store)}</span><span class="rb"><i style="width:${r.avg ? r.avg * 10 : 0}%"></i></span></span>
-      <span class="rc">${r.count}/${jc} juri</span><span class="rv">${r.avg === null ? '–' : fmt(r.avg)}</span></button>${detail}</div>`;
+      <span class="rc">${r.count ? esc(r.juriName || '') : 'Belum dinilai'}</span><span class="rv">${r.avg === null ? '–' : fmt(r.avg)}</span></button>${detail}</div>`;
   }).join('') : '<p class="empty">Tidak ada toko yang cocok.</p>';
   $('#rows').querySelectorAll('.rhead').forEach((b) => b.onclick = () => { const s = b.dataset.s; S.open.has(s) ? S.open.delete(s) : S.open.add(s); updateRanking(); });
 }
@@ -272,7 +301,7 @@ function updateJuri() {
   const el = $('#prog'); if (!el) return;
   if (!S.ranking) { el.innerHTML = '<p class="empty">Memuat…</p>'; return; }
   const t = S.ranking.total;
-  el.innerHTML = S.ranking.progress.map((p) => `<div class="prow"><div><span>${esc(p.name)}</span><span>${p.done}/${t}</span></div><div class="bar"><i style="width:${t ? p.done / t * 100 : 0}%"></i></div></div>`).join('');
+  el.innerHTML = S.ranking.progress.map((p) => `<div class="prow"><div><span>${esc(p.name)}</span><span>${p.done}/${p.total} toko</span></div><div class="bar"><i style="width:${p.total ? p.done / p.total * 100 : 0}%"></i></div></div>`).join('');
 }
 
 /* ---------- Excel (.xlsx) ---------- */
@@ -291,25 +320,25 @@ async function downloadXlsx() {
     await loadExcelJS();
     const wb = new ExcelJS.Workbook();
     const style = (ws) => {
-      const r = ws.getRow(1); r.height = 26;
+      const r = ws.getRow(1); r.height = 30;
       r.eachCell((c) => { c.font = {bold: true, color: {argb: 'FFFFFFFF'}}; c.fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: 'FF0A3D3A'}}; c.alignment = {vertical: 'middle', horizontal: 'center', wrapText: true}; });
-      ws.views = [{state: 'frozen', ySplit: 1}]; ws.autoFilter = {from: {row: 1, column: 1}, to: {row: 1, column: ws.columnCount}};
+      ws.views = [{state: 'frozen', ySplit: 1, xSplit: 2}]; ws.autoFilter = {from: {row: 1, column: 1}, to: {row: 1, column: ws.columnCount}};
     };
     const ws = wb.addWorksheet('Ranking');
-    ws.columns = [{header: 'Peringkat', width: 11}, {header: 'Toko', width: 32}, {header: 'Rata-rata', width: 12}, {header: 'Juri yang menilai', width: 14}, ...S.cfg.juri.map((j) => ({header: j, width: 12}))];
+    ws.columns = [{header: 'Peringkat', width: 11}, {header: 'Toko', width: 32}, {header: 'Juri penilai', width: 18}, {header: 'Nilai akhir', width: 12}, ...R.areas.map((a) => ({header: a, width: 14}))];
     const medal = {1: 'FFD4A017', 2: 'FF8D9AA3', 3: 'FFA9683A'};
     for (const r of R.rows) {
-      const row = ws.addRow([r.rank ?? '', r.store, r.avg ?? '', r.count, ...S.cfg.juri.map((j) => (r.juri.find((y) => y.juri === j) || {}).avg ?? '')]);
-      row.eachCell((c, n) => { if (n !== 2) c.alignment = {horizontal: 'center'}; if (n === 3 || n > 4) c.numFmt = '0.00'; });
-      row.getCell(3).font = {bold: true};
-      if (r.rank && r.rank <= 3) row.getCell(1).fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: medal[r.rank]}}, row.getCell(1).font = {bold: true, color: {argb: 'FFFFFFFF'}};
+      const row = ws.addRow([r.rank ?? '', r.store, r.juriName || '', r.avg ?? '', ...R.areas.map((_, k) => (r.areaAvg ? r.areaAvg[k] : ''))]);
+      row.eachCell((c, n) => { if (n !== 2 && n !== 3) c.alignment = {horizontal: 'center'}; if (n >= 4) c.numFmt = '0.00'; });
+      row.getCell(4).font = {bold: true};
+      if (r.rank && r.rank <= 3) { row.getCell(1).fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: medal[r.rank]}}; row.getCell(1).font = {bold: true, color: {argb: 'FFFFFFFF'}}; }
     }
     style(ws);
-    const wd = wb.addWorksheet('Detail nilai');
-    wd.columns = [{header: 'Toko', width: 32}, {header: 'Juri', width: 16}, ...R.areas.map((a) => ({header: a, width: 16})), {header: 'Rata-rata juri', width: 14}];
+    const wd = wb.addWorksheet('Semua jawaban');
+    wd.columns = [{header: 'Toko', width: 32}, {header: 'Juri', width: 18}, ...R.qlabels.map((l) => ({header: l, width: 14}))];
     for (const r of R.rows.slice().sort((a, b) => a.store.localeCompare(b.store, 'id', {numeric: true})))
-      for (const j of r.juri) { const row = wd.addRow([r.store, j.juri, ...R.areas.map((_, k) => j.nilai[k] ?? ''), j.avg]); row.eachCell((c, n) => { if (n > 2) c.alignment = {horizontal: 'center'}; }); row.getCell(R.areas.length + 3).numFmt = '0.00'; }
-    style(wd);
+      for (const j of r.juri) { const row = wd.addRow([r.store, j.juri, ...j.nilai]); row.eachCell((c, n) => { if (n > 2) c.alignment = {horizontal: 'center'}; }); }
+    style(wd); wd.getRow(1).height = 90;
     const buf = await wb.xlsx.writeBuffer();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([buf], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
@@ -322,19 +351,51 @@ async function downloadXlsx() {
 function parseAccounts(lines) {
   return lines.map((l) => l.trim()).filter(Boolean).map((l) => { const p = l.split(','); return {id: (p[0] || '').trim(), password: (p[1] || '').trim(), name: p.slice(2).join(',').trim()}; });
 }
+function parseAreas(text) {
+  const areas = []; let a = null, g = '';
+  for (const raw of text.split('\n')) {
+    const l = raw.trim(); if (!l) continue;
+    if (l.startsWith('##')) g = l.slice(2).trim();
+    else if (l.startsWith('#')) { a = {name: l.slice(1).trim(), qs: []}; areas.push(a); g = ''; }
+    else { if (!a) { a = {name: 'Umum', qs: []}; areas.push(a); } a.qs.push({g, t: l.replace(/^[-•*]\s*/, '')}); }
+  }
+  return areas;
+}
+function areasToText(areas) {
+  return areas.map((a) => { let out = '# ' + a.name, g = null; for (const q of a.qs) { if ((q.g || '') !== g) { g = q.g || ''; if (g) out += '\n## ' + g; } out += '\n' + q.t; } return out; }).join('\n\n');
+}
+const parseStores = (lines) => lines.map((l) => l.trim()).filter(Boolean).map((l) => { const p = l.split(/\t|\|/); return {name: (p[0] || '').trim(), juri: (p[1] || '').trim().toLowerCase()}; });
 function renderSettings() {
   const c = S.cfg;
   $('#body').innerHTML = `
     <label for="s-title" style="margin-top:0">Judul lomba</label><input id="s-title" value="${esc(c.title)}">
-    <label for="s-areas">Area penilaian (1 baris = 1 area)</label><textarea id="s-areas" style="min-height:120px">${esc(c.areas.join('\n'))}</textarea>
-    <label for="s-juri">Akun juri (1 baris = 1 juri, format: id, kata sandi, nama)</label><textarea id="s-juri" style="min-height:150px" spellcheck="false">${esc((c.accounts || []).map((a) => [a.id, a.password, a.name].join(', ')).join('\n'))}</textarea>
-    <label for="s-stores">Daftar toko (1 baris = 1 toko)</label><textarea id="s-stores" style="min-height:220px">${esc(c.stores.join('\n'))}</textarea>
-    <p class="hint">Atur semuanya sebelum juri mulai menilai. Jangan mengubah nama toko, nama juri (kolom ke-3), atau jumlah area setelah ada nilai masuk, karena nilai terikat pada nama tersebut.</p>
+    <label for="s-areas">Area &amp; pertanyaan</label>
+    <textarea id="s-areas" style="min-height:300px" spellcheck="false">${esc(areasToText(c.areas))}</textarea>
+    <p class="hint"># Nama area (satu baris, diawali #) · ## Sub-judul (opsional) · baris lain = satu pertanyaan, dinilai 1–10. Nilai akhir toko = rata-rata nilai tiap area.</p>
+    <label for="s-juri">Akun juri (1 baris = 1 juri: id, kata sandi, nama)</label>
+    <textarea id="s-juri" style="min-height:150px" spellcheck="false">${esc((c.accounts || []).map((a) => [a.id, a.password, a.name].join(', ')).join('\n'))}</textarea>
+    <label for="s-stores">Daftar toko dan juri penanggung jawab (1 baris: nama toko | id juri)</label>
+    <textarea id="s-stores" style="min-height:240px" spellcheck="false">${esc(c.stores.map((s) => s.name + (s.juri ? ' | ' + s.juri : '')).join('\n'))}</textarea>
+    <div class="tools" style="margin-top:8px"><button class="ghost" id="auto" type="button">Bagi rata otomatis</button></div>
+    <p class="hint" id="cnt"></p>
+    <p class="hint">Bisa tempel dari Excel (2 kolom: nama toko, id juri). Atur semuanya sebelum juri mulai menilai. Jangan mengubah nama toko, nama juri, atau struktur pertanyaan setelah ada nilai masuk.</p>
     <p class="err" id="serr"></p><button class="primary" id="ssave" style="width:100%;margin-top:8px">Simpan pengaturan</button>`;
+  const lines = (id) => $(id).value.split('\n');
+  const count = () => {
+    const per = {}; let none = 0; parseStores(lines('#s-stores')).forEach((s) => s.juri ? per[s.juri] = (per[s.juri] || 0) + 1 : none++);
+    $('#cnt').textContent = 'Pembagian: ' + (Object.entries(per).map(([k, v]) => k + ' ' + v + ' toko').join(' · ') || '-') + (none ? ' · BELUM DIBAGI: ' + none : '');
+  };
+  count(); $('#s-stores').oninput = count;
+  $('#auto').onclick = () => {
+    const ids = parseAccounts(lines('#s-juri')).map((a) => a.id).filter(Boolean), names = parseStores(lines('#s-stores')).map((s) => s.name).filter(Boolean);
+    if (!ids.length || !names.length) return toast('Isi akun juri dan daftar toko dulu', true);
+    const size = Math.ceil(names.length / ids.length);
+    $('#s-stores').value = names.map((n, i) => n + ' | ' + ids[Math.min(Math.floor(i / size), ids.length - 1)]).join('\n'); count();
+  };
   $('#ssave').onclick = async () => {
-    const lines = (id) => $(id).value.split('\n'), btn = $('#ssave'); btn.disabled = true; btn.textContent = 'Menyimpan…';
+    const btn = $('#ssave'); btn.disabled = true; btn.textContent = 'Menyimpan…';
     try {
-      const d = await api('saveConfig', {config: {title: $('#s-title').value, areas: lines('#s-areas'), accounts: parseAccounts(lines('#s-juri')), stores: lines('#s-stores')}});
+      const d = await api('saveConfig', {config: {title: $('#s-title').value, areas: parseAreas($('#s-areas').value), accounts: parseAccounts(lines('#s-juri')), stores: parseStores(lines('#s-stores'))}});
       S.cfg = d.config; document.title = S.cfg.title; toast('Pengaturan tersimpan'); refresh(); renderSettings();
     } catch (e) { $('#serr').textContent = e.message; btn.disabled = false; btn.textContent = 'Simpan pengaturan'; }
   };
