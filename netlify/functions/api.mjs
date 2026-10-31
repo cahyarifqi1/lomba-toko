@@ -84,7 +84,7 @@ export default async (req) => {
 
   switch (b.action) {
     case "load": {
-      const out = { role, config: pub(cfg, role) };
+      const out = { role, config: pub(cfg, role), resetAt: ((await db.get("meta", { type: "json" })) || {}).resetAt || 0 };
       if (me) { const m = (await db.get(key(me.name), { type: "json" })) || {}; out.mine = Object.fromEntries(Object.entries(m).map(([k, v]) => [k, { ts: v.ts }])); }
       return json(out);
     }
@@ -175,6 +175,14 @@ export default async (req) => {
       delete mine[b.store];
       await db.setJSON(k, mine);
       return json({ ok: true });
+    }
+    case "reset": {
+      if (role !== "admin") return json({ error: "Khusus admin" }, 403);
+      if (b.confirm !== "RESET") return json({ error: "Konfirmasi tidak sesuai" }, 400);
+      const { blobs } = await db.list({ prefix: "juri:" });
+      await Promise.all(blobs.map((x) => db.delete(x.key)));
+      await db.setJSON("meta", { resetAt: Date.now() });
+      return json({ ok: true, deleted: blobs.length });
     }
     default: return json({ error: "Aksi tidak dikenal" }, 400);
   }
