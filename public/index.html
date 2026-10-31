@@ -122,6 +122,7 @@ label{display:block;font-weight:600;margin:14px 0 6px}
 .acts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .acts button{padding:12px}
 .dgb{background:#b91c1c;color:#fff}
+.dgb:disabled{background:var(--dis);color:var(--mute)}
 
 .store,.pick,.ar,.rrow,.stat,.prow,.pod{box-shadow:0 1px 2px rgba(20,32,46,.05)}
 .rk1{background:#fef3c7;color:#92400e}.rk2{background:#e3e8f0;color:#374151}.rk3{background:#ffedd5;color:#9a3412}
@@ -169,12 +170,13 @@ const finalOf = (nilai, areas) => {
 };
 const isDone = (s) => !!S.mine[s];
 const band = (inner, cls = '') => `<div class="band ${cls}"><div class="wrap">${inner}</div></div>`;
-function ask({title, text, ok = 'Ya', cancel = 'Batal', danger = false}) {
+function ask({title, text, ok = 'Ya', cancel = 'Batal', danger = false, need = ''}) {
   return new Promise((res) => {
     const m = document.createElement('div'); m.className = 'modal';
-    m.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="ico ${danger ? 'dg' : ''}">${danger ? '!' : '✓'}</div><h3>${esc(title)}</h3><p>${text}</p>
+    m.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="ico ${danger ? 'dg' : ''}">${danger ? '!' : '✓'}</div><h3>${esc(title)}</h3><p>${text}</p>${need ? '<input id="mi" autocomplete="off" autocapitalize="characters" placeholder="Ketik ' + esc(need) + '" style="margin-bottom:14px">' : ''}
       <div class="acts"><button class="ghost" id="mn">${esc(cancel)}</button><button class="primary ${danger ? 'dgb' : ''}" id="my">${esc(ok)}</button></div></div>`;
     document.body.appendChild(m);
+    if (need) { const okb = m.querySelector('#my'), inp = m.querySelector('#mi'); okb.disabled = true; inp.oninput = () => { okb.disabled = inp.value.trim().toUpperCase() !== need; }; }
     const done = (v) => { m.remove(); res(v); };
     m.querySelector('#my').onclick = () => done(true); m.querySelector('#mn').onclick = () => done(false);
     m.onclick = (e) => { if (e.target === m) done(false); };
@@ -219,7 +221,7 @@ function showLogin(error) {
 }
 async function bootstrap() {
   const d = await api('load');
-  S.role = d.role; S.cfg = d.config; S.mine = d.mine || {}; if (S.role === 'juri' && !S.cfg.juri.includes(S.juri)) S.juri = ''; document.title = S.cfg.title; route();
+  applyReset(d.resetAt); S.role = d.role; S.cfg = d.config; S.mine = d.mine || {}; if (S.role === 'juri' && !S.cfg.juri.includes(S.juri)) S.juri = ''; document.title = S.cfg.title; route();
 }
 function route() {
   if (S.role === 'admin') { setTab(S.tab); startAuto(); refresh(); } else if (S.juri) showJuriHome(); else showJuriPick();
@@ -236,9 +238,26 @@ function showJuriPick() {
     try { const d = await api('load'); S.mine = d.mine || {}; S.cfg = d.config; leaveDeep(); showJuriHome(); } catch (e) { toast(e.message, true); }
   });
 }
+function applyReset(ra) {
+  const v = String(ra || '');
+  if (store.get('lomba_reset') !== v) {
+    try { Object.keys(localStorage).filter((k) => k.startsWith('lomba_draft_')).forEach((k) => localStorage.removeItem(k)); } catch {}
+    store.set('lomba_reset', v);
+  }
+}
+let syncing = false;
+async function syncMine() {
+  if (syncing || S.role !== 'juri' || !S.juri) return; syncing = true;
+  try {
+    const d = await api('load'), a = Object.keys(S.mine).sort().join('|'), b = Object.keys(d.mine || {}).sort().join('|');
+    S.mine = d.mine || {}; applyReset(d.resetAt);
+    if (a !== b && $('#list')) { S.scroll = window.scrollY; showJuriHome(true); }
+  } catch {}
+  syncing = false;
+}
 const myId = () => (S.cfg.accounts.find((a) => a.name === S.juri) || {}).id;
 const mineStores = () => S.cfg.stores.filter((s) => s.juri.includes(myId()));
-function showJuriHome() {
+function showJuriHome(noSync) {
   const my = mineStores(), pool = S.mineOnly && my.length ? my : S.cfg.stores;
   const total = pool.length, done = pool.filter((s) => isDone(s.name)).length;
   app.innerHTML = band(`<div class="row2"><div><h1>${esc(S.cfg.title)}</h1>
@@ -253,6 +272,7 @@ function showJuriHome() {
   $('#todo').onchange = (e) => { S.onlyTodo = e.target.checked; renderStoreList(); };
   if ($('#mine')) $('#mine').onchange = (e) => { S.mineOnly = e.target.checked; S.scroll = 0; showJuriHome(); };
   renderStoreList(); window.scrollTo(0, S.scroll);
+  if (noSync !== true) syncMine();
 }
 function renderStoreList() {
   const q = S.query.trim().toLowerCase(), mine = S.mineOnly && mineStores().length > 0, id = myId();
@@ -461,7 +481,10 @@ function renderSettings() {
     <div class="tools" style="margin-top:8px"><button class="ghost" id="auto" type="button">Bagi rata otomatis</button></div>
     <p class="hint" id="cnt"></p>
     <p class="hint">Bisa tempel dari Excel (2 kolom: nama toko, id juri). Atur semuanya sebelum juri mulai menilai. Jangan mengubah nama toko, nama juri, atau struktur pertanyaan setelah ada nilai masuk.</p>
-    <p class="err" id="serr"></p><button class="primary" id="ssave" style="width:100%;margin-top:8px">Simpan pengaturan</button>`;
+    <p class="err" id="serr"></p><button class="primary" id="ssave" style="width:100%;margin-top:8px">Simpan pengaturan</button>
+    <div style="margin-top:28px;padding-top:18px;border-top:1px solid var(--line)"><h3>Reset nilai</h3>
+      <p class="hint">Menghapus SEMUA nilai dari semua juri (misalnya setelah latihan), sehingga semua toko kembali "belum dinilai". Pengaturan, daftar toko, juri, dan pertanyaan tidak berubah. Unduh Excel dulu bila perlu.</p>
+      <button class="ghost" id="reset" type="button" style="width:100%;color:var(--warn);border-color:var(--warn)">Reset semua nilai</button></div>`;
   const lines = (id) => $(id).value.split('\n');
   const count = () => {
     const per = {}; let none = 0; parseStores(lines('#s-stores')).forEach((s) => s.juri.length ? s.juri.forEach((j) => per[j] = (per[j] || 0) + 1) : none++);
@@ -474,6 +497,10 @@ function renderSettings() {
     const base = Math.floor(names.length / ids.length), extra = names.length % ids.length, own = [];
     ids.forEach((_, j) => { for (let t = 0; t < base + (j < extra ? 1 : 0); t++) own.push(j); });
     $('#s-stores').value = names.map((n, i) => n + ' | ' + ids[own[i]]).join('\n'); count();
+  };
+  $('#reset').onclick = async () => {
+    if (!(await ask({title: 'Reset semua nilai?', text: 'Semua nilai dari semua juri akan <b>dihapus permanen</b> dan tidak bisa dikembalikan. Pengaturan tidak berubah.<br>Ketik <b>RESET</b> untuk melanjutkan.', ok: 'Ya, reset semua', cancel: 'Batal', danger: true, need: 'RESET'}))) return;
+    try { const d = await api('reset', {confirm: 'RESET'}); S.ranking = null; S.open = new Set(); toast('Nilai direset (' + d.deleted + ' data dihapus)'); refresh(); } catch (e) { toast(e.message, true); }
   };
   $('#ssave').onclick = async () => {
     const btn = $('#ssave'); btn.disabled = true; btn.textContent = 'Menyimpan…';
