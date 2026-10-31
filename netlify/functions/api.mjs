@@ -6,6 +6,7 @@ const DEF = {
   juri: Array.from({ length: 8 }, (_, i) => `Juri ${i + 1}`),
   stores: Array.from({ length: 95 }, (_, i) => `Toko ${i + 1}`),
   areas: [
+    { name: "Area penjualan", qs: mk("", 4, "Area penjualan") },
     { name: "Gudang", qs: [
       ...mk("Penataan barang", 4, "Penataan barang"), ...mk("Kondisi barang & harga", 4, "Kondisi barang & harga"),
       ...mk("Kebersihan", 4, "Kebersihan"), ...mk("Lorong, kasir & kenyamanan", 4, "Lorong, kasir & kenyamanan")] },
