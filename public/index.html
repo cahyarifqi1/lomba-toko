@@ -3,100 +3,111 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b5f55">
+<meta name="theme-color" content="#0a3d3a">
 <title>Penilaian Lomba Toko</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#f2f5f3; --card:#fff; --ink:#14283a; --mute:#5d6f7c; --line:#d5ddd9;
-  --accent:#0b8a7a; --accent-d:#0b5f55; --accent-l:#dff1ed; --gold:#c9972b; --warn:#b3261e;
-  --r:14px;
-}
+:root{--bg:#f4f6f3;--card:#fff;--ink:#10242b;--mute:#5b6c70;--line:#dbe2dd;--deep:#0a3d3a;--acc:#12896f;--accl:#e1f3ee;
+  --gold:#d4a017;--silver:#8d9aa3;--bronze:#a9683a;--lo:#d1493f;--mid:#d98e0b;--hi:#14906f;--warn:#b3261e;
+  --h:"Bricolage Grotesque","Plus Jakarta Sans",system-ui,sans-serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
-body{font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);
-  font-size:16px;line-height:1.4;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
-#app{max-width:760px;margin:0 auto;padding:14px 14px 110px}
-h1{font-size:1.15rem;margin:0;font-weight:800;line-height:1.25}
-h2{margin:0}
+body{font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.4}
+.wrap{max-width:760px;margin:0 auto;padding:0 14px}
+#app{padding-bottom:120px}
+h1,h2{font-family:var(--h);margin:0;line-height:1.15}
 button{font:inherit;color:inherit;cursor:pointer}
-.link{background:none;border:0;color:var(--accent-d);font-weight:600;padding:6px 4px;text-decoration:underline}
-.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
-.sub{margin:4px 0 0;color:var(--mute);font-size:.9rem}
-.primary{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:14px 20px;font-weight:800}
+.band{background:var(--deep);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 0 18px;margin-bottom:14px}
+.band h1{font-size:1.35rem;font-weight:800}
+.band .sub{color:#b9dad3;margin:4px 0 0;font-size:.9rem}
+.band .link{color:#fff}
+.row2{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.link{background:none;border:0;color:var(--acc);font-weight:600;padding:6px 4px;text-decoration:underline}
+.primary{background:var(--acc);color:#fff;border:0;border-radius:12px;padding:14px 20px;font-weight:800}
 .primary:disabled{background:#a9bbb6;cursor:not-allowed}
 .ghost{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-weight:600}
-input,textarea,select{font:inherit;width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;background:#fff;color:var(--ink)}
-input:focus,textarea:focus,select:focus,button:focus-visible{outline:3px solid #7cc9bd;outline-offset:1px}
+.ghost:disabled{opacity:.6}
+input,textarea{font:inherit;width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;background:#fff;color:var(--ink)}
+input:focus,textarea:focus,button:focus-visible{outline:3px solid #7cc9bd;outline-offset:1px}
 textarea{min-height:140px;resize:vertical;line-height:1.5}
 label{display:block;font-weight:600;margin:14px 0 6px}
-.hint{color:var(--mute);font-size:.85rem;margin:4px 0 0}
+.hint{color:var(--mute);font-size:.85rem}
 .err{color:var(--warn);font-weight:600;margin:10px 0 0}
-
-/* login */
-.login{margin-top:12vh}
-.login h1{font-size:1.5rem;margin-bottom:6px}
-.login .box{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-top:18px}
-.login .primary{width:100%;margin-top:16px}
-
-/* juri */
-.progress{display:flex;align-items:center;gap:12px;margin-bottom:12px;font-weight:600}
-.bar{flex:1;height:10px;background:#dbe4e0;border-radius:99px;overflow:hidden}
-.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
-.chk{display:flex;align-items:center;gap:8px;margin:10px 2px;font-weight:400;color:var(--mute)}
+.login{background:var(--deep);min-height:100vh;color:#fff;padding:calc(10vh) 0 40px}
+.login h1{font-size:2rem;font-weight:800;margin-bottom:8px}
+.login p{color:#b9dad3;margin:0 0 22px}
+.login .box{background:var(--card);color:var(--ink);border-radius:18px;padding:20px}
+.login .box label{margin-top:0}
+.login .primary{width:100%;margin-top:14px}
+.login .err{color:var(--warn)}
+.prog{margin-top:14px;display:flex;align-items:center;gap:12px;font-weight:600}
+.bar{flex:1;height:10px;background:rgba(0,0,0,.12);border-radius:99px;overflow:hidden}
+.band .bar{background:rgba(255,255,255,.2)}
+.bar i{display:block;height:100%;background:var(--acc);border-radius:99px}
+.band .bar i{background:#5fd6bb}
+.sticky{position:sticky;top:0;background:var(--bg);padding:6px 0 4px;z-index:5}
+.chk{display:flex;align-items:center;gap:8px;margin:8px 2px;font-weight:400;color:var(--mute)}
 .chk input{width:20px;height:20px;margin:0}
-.store{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;background:var(--card);
-  border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:8px;min-height:54px}
-.store.done{background:var(--accent-l);border-color:#b5dcd4}
-.store b{font-size:1.05rem}
-.store span{color:var(--accent-d);font-weight:800}
-.store em{color:var(--mute);font-style:normal;font-size:.9rem}
+.store{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;background:var(--card);
+  border:1px solid var(--line);border-left:6px solid var(--line);border-radius:12px;padding:14px;margin-top:8px;min-height:58px}
+.store.done{border-left-color:var(--acc);background:#f2faf8}
+.store b{font-size:1.02rem}
+.store span{color:var(--acc);font-weight:800;white-space:nowrap}
+.store em{color:var(--mute);font-style:normal;font-size:.88rem;white-space:nowrap}
 .pick{width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:8px;font-weight:600}
-
-/* scoring */
-.storetitle{font-size:1.5rem;font-weight:800;margin:4px 0 14px}
-.area{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-bottom:10px}
-.areahead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-weight:600}
-.val{font-size:1.3rem;min-width:2ch;text-align:right;color:var(--accent-d)}
+.area{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.areahead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-weight:600}
+.val{font-family:var(--h);font-size:1.7rem;min-width:2ch;text-align:right}
 .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.n{height:52px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:800;font-size:1.1rem}
-.n.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.savebar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
-  padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:12px}
+.n{height:54px;border-radius:12px;border:2px solid var(--c);background:#fff;color:var(--c);font-weight:800;font-size:1.15rem}
+.n.on{background:var(--c);color:#fff}
+.savebar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+.savebar .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0}
 .savebar small{display:block;color:var(--mute)}
-.savebar b{font-size:1.8rem;line-height:1}
+.savebar b{font-family:var(--h);font-size:2rem;line-height:1}
 .savebar .primary{flex:1;max-width:260px}
-
-/* admin */
-.tabs{display:flex;gap:6px;margin-bottom:12px;background:#e3eae6;padding:4px;border-radius:12px}
-.tabs button{flex:1;border:0;background:none;padding:10px 6px;border-radius:9px;font-weight:600;color:var(--mute)}
-.tabs button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.tabs{display:flex;gap:6px;margin:14px 0 0}
+.tabs button{border:0;background:rgba(255,255,255,.12);color:#fff;padding:9px 16px;border-radius:99px;font-weight:600}
+.tabs button.on{background:#fff;color:var(--deep)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.stat b{display:block;font-family:var(--h);font-size:1.4rem}
+.stat small{color:var(--mute);font-size:.78rem}
+.podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:8px;align-items:end;margin-bottom:14px}
+.pod{background:var(--card);border:1px solid var(--line);border-top:5px solid var(--c);border-radius:14px;padding:10px 8px;text-align:center;min-width:0}
+.pod.p1{padding-top:18px;padding-bottom:16px}
+.pod .m{font-family:var(--h);font-weight:800;color:var(--c);font-size:1.1rem}
+.pod .nm{font-weight:600;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:2px 0}
+.pod .sc{font-family:var(--h);font-weight:800;font-size:1.5rem}
+.p1{--c:var(--gold)}.p2{--c:var(--silver)}.p3{--c:var(--bronze)}
 .tools{display:flex;gap:8px;margin-bottom:10px}
-.tools input{flex:1}
-.sum{color:var(--mute);font-size:.9rem;margin:2px 2px 10px}
+.tools input{flex:1;min-width:0}
+.sum{color:var(--mute);font-size:.85rem;margin:2px 2px 8px}
 .rrow{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-top:8px;overflow:hidden}
-.rhead{display:flex;align-items:center;gap:10px;width:100%;padding:12px;background:none;border:0;text-align:left;min-height:56px}
-.rk{flex:none;width:36px;height:36px;border-radius:50%;background:#e8eeea;display:grid;place-items:center;font-weight:800}
-.rk1{background:var(--gold);color:#fff}.rk2{background:#8a9aa6;color:#fff}.rk3{background:#a8693b;color:#fff}
-.rn{flex:1;font-weight:600}
-.rc{color:var(--mute);font-size:.85rem}
-.rv{font-weight:800;font-size:1.2rem;min-width:3.6ch;text-align:right}
+.rhead{display:flex;align-items:center;gap:10px;width:100%;padding:12px;background:none;border:0;text-align:left;min-height:58px}
+.rk{flex:none;width:36px;height:36px;border-radius:50%;background:#e8eeea;display:grid;place-items:center;font-family:var(--h);font-weight:800}
+.rk1{background:var(--gold);color:#fff}.rk2{background:var(--silver);color:#fff}.rk3{background:var(--bronze);color:#fff}
+.rm{flex:1;min-width:0}
+.rn{font-weight:600;display:block}
+.rb{display:block;height:5px;background:#e8eeea;border-radius:9px;margin-top:6px;overflow:hidden}
+.rb i{display:block;height:100%;background:var(--acc)}
+.rc{color:var(--mute);font-size:.8rem;white-space:nowrap}
+.rv{font-family:var(--h);font-weight:800;font-size:1.3rem;min-width:3.4ch;text-align:right}
 .detail{border-top:1px solid var(--line);padding:8px 12px 12px;background:#fafcfb}
 .jl{padding:8px 0;border-bottom:1px dashed var(--line)}
 .jl:last-child{border:0}
 .jl div:first-child{display:flex;justify-content:space-between;font-weight:600}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .chips span{background:#e8eeea;border-radius:8px;padding:3px 8px;font-size:.82rem}
-.chips b{color:var(--accent-d)}
 .prow{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:8px}
 .prow div:first-child{display:flex;justify-content:space-between;font-weight:600;margin-bottom:8px}
+.prow .bar{background:#e3e9e5}
 .empty{color:var(--mute);text-align:center;padding:24px 0}
-.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;
-  padding:12px 18px;border-radius:12px;font-weight:600;z-index:9;max-width:90%;text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:12px;font-weight:600;z-index:9;max-width:90%;text-align:center}
 .toast.bad{background:var(--warn)}
-@media (prefers-reduced-motion:no-preference){.bar i{transition:width .3s}}
+@media (prefers-reduced-motion:no-preference){.bar i,.rb i{transition:width .4s}}
 </style>
 </head>
 <body>
@@ -106,289 +117,233 @@ const app = document.getElementById('app');
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = (n) => Number(n).toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const scale = (n) => n <= 4 ? '#d1493f' : n <= 7 ? '#d98e0b' : '#14906f';
 const store = {
   get: (k) => { try { return localStorage.getItem(k) || ''; } catch { return ''; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
   del: (k) => { try { localStorage.removeItem(k); } catch {} },
 };
-
-const S = {
-  code: store.get('lomba_code'), role: null, cfg: null, juri: store.get('lomba_juri'), mine: {},
-  ranking: null, tab: 'ranking', query: '', onlyTodo: false, open: new Set(), timer: null, scroll: 0,
-};
+const S = {id: store.get('lomba_id'), pw: store.get('lomba_pw'), role: null, cfg: null, juri: '', mine: {},
+  ranking: null, tab: 'ranking', query: '', onlyTodo: false, open: new Set(), timer: null, scroll: 0};
 
 async function api(action, extra = {}) {
   let res;
-  try {
-    res = await fetch('/api', {method: 'POST', headers: {'content-type': 'application/json'},
-      body: JSON.stringify({action, code: S.code, ...extra})});
-  } catch {
-    throw new Error('Tidak ada koneksi internet. Coba lagi.');
-  }
-  let data = {};
-  try { data = await res.json(); } catch {}
+  try { res = await fetch('/api', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({action, id: S.id, pw: S.pw, ...extra})}); }
+  catch { throw new Error('Tidak ada koneksi internet. Coba lagi.'); }
+  let data = {}; try { data = await res.json(); } catch {}
   if (!res.ok) { const e = new Error(data.error || 'Terjadi kesalahan (' + res.status + ')'); e.status = res.status; throw e; }
   return data;
 }
-
 function toast(msg, bad) {
-  const t = document.createElement('div');
-  t.className = 'toast' + (bad ? ' bad' : '');
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2600);
+  const t = document.createElement('div'); t.className = 'toast' + (bad ? ' bad' : ''); t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2800);
 }
+const band = (inner) => `<div class="band"><div class="wrap">${inner}</div></div>`;
 
 /* ---------- Login ---------- */
 function showLogin(error) {
   stopAuto();
-  app.innerHTML = `
-    <div class="login">
-      <h1>Penilaian Lomba Kebersihan &amp; Kerapihan Toko</h1>
-      <p class="sub">Masukkan kode dari admin untuk mulai.</p>
-      <div class="box">
-        <label for="code" style="margin-top:0">Kode</label>
-        <input id="code" type="password" autocomplete="off" autocapitalize="off" value="${esc(S.code)}">
-        <p class="err" id="err">${error ? esc(error) : ''}</p>
-        <button class="primary" id="go">Masuk</button>
-      </div>
-    </div>`;
+  app.innerHTML = `<div class="login"><div class="wrap">
+    <h1>Lomba Kebersihan &amp; Kerapihan Toko</h1><p>Silakan masuk untuk mulai menilai.</p>
+    <div class="box"><label for="uid">ID</label>
+      <input id="uid" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(S.id)}">
+      <label for="upw">Kata sandi</label>
+      <input id="upw" type="password" autocomplete="current-password" autocapitalize="off" value="${esc(S.pw)}">
+      <label class="chk"><input type="checkbox" id="show"> Tampilkan kata sandi</label>
+      <p class="err" id="err">${error ? esc(error) : ''}</p>
+      <button class="primary" id="go">Masuk</button></div></div></div>`;
   const go = async () => {
-    S.code = $('#code').value.trim();
-    if (!S.code) return;
+    S.id = $('#uid').value.trim(); S.pw = $('#upw').value.trim(); if (!S.id || !S.pw) return;
     $('#go').disabled = true; $('#go').textContent = 'Memeriksa…';
-    try { await bootstrap(); store.set('lomba_code', S.code); }
-    catch (e) { showLogin(e.message); }
+    try { await bootstrap(); store.set('lomba_id', S.id); store.set('lomba_pw', S.pw); } catch (e) { showLogin(e.message); }
   };
   $('#go').onclick = go;
-  $('#code').onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  $('#show').onchange = (e) => { $('#upw').type = e.target.checked ? 'text' : 'password'; };
+  app.querySelectorAll('input').forEach((i) => i.onkeydown = (e) => { if (e.key === 'Enter') go(); });
 }
-
 async function bootstrap() {
-  const d = await api('load', {juri: S.juri});
-  S.role = d.role; S.cfg = d.config; S.mine = d.mine || {};
-  document.title = S.cfg.title;
-  route();
+  const d = await api('load');
+  S.role = d.role; S.cfg = d.config; S.mine = d.mine || {}; S.juri = d.name || ''; document.title = S.cfg.title; route();
 }
-
 function route() {
-  if (S.role === 'admin') { setTab(S.tab); startAuto(); refresh(); }
-  else if (S.cfg.juri.includes(S.juri)) showJuriHome();
-  else showJuriPick();
+  if (S.role === 'admin') { setTab(S.tab); startAuto(); refresh(); } else showJuriHome();
 }
-
-function logout() {
-  store.del('lomba_code'); store.del('lomba_juri');
-  S.code = ''; S.juri = ''; S.role = null; showLogin();
-}
+function logout() { store.del('lomba_id'); store.del('lomba_pw'); S.id = ''; S.pw = ''; S.role = null; showLogin(); }
 
 /* ---------- Juri ---------- */
-function showJuriPick() {
-  app.innerHTML = `
-    <div class="top"><h1>Pilih nama Anda</h1><button class="link" id="out">Keluar</button></div>
-    ${S.cfg.juri.map((j, i) => `<button class="pick" data-i="${i}">${esc(j)}</button>`).join('')}`;
-  $('#out').onclick = logout;
-  app.querySelectorAll('.pick').forEach((b) => b.onclick = async () => {
-    S.juri = S.cfg.juri[+b.dataset.i]; store.set('lomba_juri', S.juri);
-    try { const d = await api('load', {juri: S.juri}); S.mine = d.mine || {}; S.cfg = d.config; showJuriHome(); }
-    catch (e) { toast(e.message, true); }
-  });
-}
-
 function showJuriHome() {
-  const total = S.cfg.stores.length;
-  const done = S.cfg.stores.filter((s) => S.mine[s]).length;
-  app.innerHTML = `
-    <div class="top">
-      <div><h1>${esc(S.cfg.title)}</h1>
-        <p class="sub">Juri: <b>${esc(S.juri)}</b> <button class="link" id="chg">ganti</button></p></div>
-      <button class="link" id="out">Keluar</button>
-    </div>
-    <div class="progress"><div class="bar"><i style="width:${total ? done / total * 100 : 0}%"></i></div><span>Terisi ${done}/${total}</span></div>
-    <input id="q" type="search" placeholder="Cari nama toko…" value="${esc(S.query)}">
-    <label class="chk"><input type="checkbox" id="todo" ${S.onlyTodo ? 'checked' : ''}> Tampilkan yang belum dinilai saja</label>
-    <div id="list"></div>`;
+  const total = S.cfg.stores.length, done = S.cfg.stores.filter((s) => S.mine[s]).length;
+  app.innerHTML = band(`<div class="row2"><div><h1>${esc(S.cfg.title)}</h1>
+      <p class="sub">Juri: <b>${esc(S.juri)}</b></p></div><button class="link" id="out">Keluar</button></div>
+    <div class="prog"><div class="bar"><i style="width:${total ? done / total * 100 : 0}%"></i></div><span>${done}/${total}</span></div>`) +
+    `<div class="wrap"><div class="sticky"><input id="q" type="search" placeholder="Cari nama toko…" value="${esc(S.query)}">
+    <label class="chk"><input type="checkbox" id="todo" ${S.onlyTodo ? 'checked' : ''}> Tampilkan yang belum dinilai saja</label></div><div id="list"></div></div>`;
   $('#out').onclick = logout;
-  $('#chg').onclick = () => { S.juri = ''; store.del('lomba_juri'); showJuriPick(); };
   $('#q').oninput = (e) => { S.query = e.target.value; renderStoreList(); };
   $('#todo').onchange = (e) => { S.onlyTodo = e.target.checked; renderStoreList(); };
-  renderStoreList();
-  window.scrollTo(0, S.scroll);
+  renderStoreList(); window.scrollTo(0, S.scroll);
 }
-
 function renderStoreList() {
   const q = S.query.trim().toLowerCase();
-  const items = S.cfg.stores.map((s, i) => ({s, i}))
-    .filter(({s}) => (!q || s.toLowerCase().includes(q)) && (!S.onlyTodo || !S.mine[s]));
+  const items = S.cfg.stores.map((s, i) => ({s, i})).filter(({s}) => (!q || s.toLowerCase().includes(q)) && (!S.onlyTodo || !S.mine[s]));
   $('#list').innerHTML = items.length ? items.map(({s, i}) => {
-    const m = S.mine[s];
-    const avg = m ? m.nilai.reduce((a, b) => a + b, 0) / m.nilai.length : null;
+    const m = S.mine[s], avg = m ? m.nilai.reduce((a, b) => a + b, 0) / m.nilai.length : null;
     return `<button class="store ${m ? 'done' : ''}" data-i="${i}"><b>${esc(s)}</b>${m ? `<span>✓ ${fmt(avg)}</span>` : '<em>Belum dinilai</em>'}</button>`;
   }).join('') : '<p class="empty">Tidak ada toko yang cocok.</p>';
   $('#list').querySelectorAll('.store').forEach((b) => b.onclick = () => { S.scroll = window.scrollY; showScoring(+b.dataset.i); });
 }
-
 function showScoring(i) {
-  const name = S.cfg.stores[i];
-  const areas = S.cfg.areas;
+  const name = S.cfg.stores[i], areas = S.cfg.areas;
   const vals = areas.map((_, k) => (S.mine[name]?.nilai || [])[k] || 0);
-  app.innerHTML = `
-    <div class="top"><button class="link" id="back">‹ Kembali</button></div>
-    <div class="storetitle">${esc(name)}</div>
-    ${areas.map((a, k) => `
-      <section class="area">
-        <div class="areahead"><span>${esc(a)}</span><b class="val" id="v${k}">${vals[k] || '–'}</b></div>
-        <div class="grid">${[1,2,3,4,5,6,7,8,9,10].map((n) => `<button type="button" class="n ${vals[k] === n ? 'on' : ''}" data-k="${k}" data-n="${n}">${n}</button>`).join('')}</div>
-      </section>`).join('')}
-    <div class="savebar"><div><small>Nilai akhir</small><b id="avg">–</b></div><button class="primary" id="save" disabled>Simpan nilai</button></div>`;
+  app.innerHTML = band(`<button class="link" id="back">‹ Kembali</button><h1 style="margin-top:6px;font-size:1.7rem">${esc(name)}</h1>`) +
+    `<div class="wrap">${areas.map((a, k) => `<section class="area"><div class="areahead"><span>${esc(a)}</span><b class="val" id="v${k}" style="color:${vals[k] ? scale(vals[k]) : 'var(--mute)'}">${vals[k] || '–'}</b></div>
+      <div class="grid">${[1,2,3,4,5,6,7,8,9,10].map((n) => `<button type="button" class="n ${vals[k] === n ? 'on' : ''}" style="--c:${scale(n)}" data-k="${k}" data-n="${n}">${n}</button>`).join('')}</div></section>`).join('')}</div>
+    <div class="savebar"><div class="wrap"><div><small>Nilai akhir</small><b id="avg">–</b></div><button class="primary" id="save" disabled>Simpan nilai</button></div></div>`;
   window.scrollTo(0, 0);
-
   const update = () => {
     const full = vals.every((v) => v > 0);
-    $('#avg').textContent = full ? fmt(vals.reduce((a, b) => a + b, 0) / vals.length) : '–';
-    $('#save').disabled = !full;
+    $('#avg').textContent = full ? fmt(vals.reduce((a, b) => a + b, 0) / vals.length) : '–'; $('#save').disabled = !full;
   };
   update();
   app.querySelectorAll('.n').forEach((b) => b.onclick = () => {
-    const k = +b.dataset.k, n = +b.dataset.n;
-    vals[k] = n; $('#v' + k).textContent = n;
-    app.querySelectorAll(`.n[data-k="${k}"]`).forEach((x) => x.classList.toggle('on', +x.dataset.n === n));
-    update();
+    const k = +b.dataset.k, n = +b.dataset.n; vals[k] = n;
+    const v = $('#v' + k); v.textContent = n; v.style.color = scale(n);
+    app.querySelectorAll(`.n[data-k="${k}"]`).forEach((x) => x.classList.toggle('on', +x.dataset.n === n)); update();
   });
   $('#back').onclick = showJuriHome;
   $('#save').onclick = async () => {
     const btn = $('#save'); btn.disabled = true; btn.textContent = 'Menyimpan…';
-    try {
-      const d = await api('submit', {juri: S.juri, store: name, nilai: vals});
-      S.mine[name] = d.saved;
-      showJuriHome(); toast('Tersimpan: ' + name);
-    } catch (e) {
-      toast(e.message, true); btn.disabled = false; btn.textContent = 'Simpan nilai';
-    }
+    try { const d = await api('submit', {juri: S.juri, store: name, nilai: vals}); S.mine[name] = d.saved; showJuriHome(); toast('Tersimpan: ' + name); }
+    catch (e) { toast(e.message, true); btn.disabled = false; btn.textContent = 'Simpan nilai'; }
   };
 }
 
 /* ---------- Admin ---------- */
 function setTab(t) {
   S.tab = t;
-  app.innerHTML = `
-    <div class="top"><div><h1>${esc(S.cfg.title)}</h1><p class="sub">Admin</p></div><button class="link" id="out">Keluar</button></div>
-    <div class="tabs">
-      ${[['ranking', 'Ranking'], ['juri', 'Juri'], ['settings', 'Pengaturan']].map(([k, l]) => `<button data-t="${k}" class="${t === k ? 'on' : ''}">${l}</button>`).join('')}
-    </div>
-    <div id="body"></div>`;
+  app.innerHTML = band(`<div class="row2"><div><h1>${esc(S.cfg.title)}</h1><p class="sub">Admin</p></div><button class="link" id="out">Keluar</button></div>
+    <div class="tabs">${[['ranking', 'Ranking'], ['juri', 'Juri'], ['settings', 'Pengaturan']].map(([k, l]) => `<button data-t="${k}" class="${t === k ? 'on' : ''}">${l}</button>`).join('')}</div>`) +
+    `<div class="wrap" id="body"></div>`;
   $('#out').onclick = logout;
   app.querySelectorAll('.tabs button').forEach((b) => b.onclick = () => setTab(b.dataset.t));
   if (t === 'ranking') {
-    $('#body').innerHTML = `
-      <div class="tools"><input id="rq" type="search" placeholder="Cari toko…" value="${esc(S.query)}"><button class="ghost" id="reload">Muat ulang</button><button class="ghost" id="csv">CSV</button></div>
+    $('#body').innerHTML = `<div class="stats" id="stats"></div><div id="pod"></div>
+      <div class="tools"><input id="rq" type="search" placeholder="Cari toko…" value="${esc(S.query)}"><button class="ghost" id="reload">Muat ulang</button><button class="ghost" id="xls">Excel</button></div>
       <div class="sum" id="sum"></div><div id="rows"></div>`;
     $('#rq').oninput = (e) => { S.query = e.target.value; updateRanking(); };
-    $('#reload').onclick = () => refresh(true);
-    $('#csv').onclick = downloadCsv;
-    updateRanking();
-  } else if (t === 'juri') {
-    $('#body').innerHTML = '<div id="prog"></div>';
-    updateJuri();
-  } else {
-    renderSettings();
-  }
+    $('#reload').onclick = () => refresh(true); $('#xls').onclick = downloadXlsx; updateRanking();
+  } else if (t === 'juri') { $('#body').innerHTML = '<div id="prog"></div>'; updateJuri(); }
+  else renderSettings();
 }
-
 function startAuto() { stopAuto(); S.timer = setInterval(() => { if (!document.hidden) refresh(); }, 20000); }
 function stopAuto() { if (S.timer) clearInterval(S.timer); S.timer = null; }
-
 async function refresh(manual) {
   try {
     S.ranking = await api('ranking');
-    if (S.tab === 'ranking') updateRanking();
-    if (S.tab === 'juri') updateJuri();
+    if (S.tab === 'ranking') updateRanking(); if (S.tab === 'juri') updateJuri();
     if (manual) toast('Data diperbarui');
-  } catch (e) {
-    if (e.status === 401) return logout();
-    if (manual) toast(e.message, true);
-  }
+  } catch (e) { if (e.status === 401) return logout(); if (manual) toast(e.message, true); }
 }
-
 function updateRanking() {
-  const R = S.ranking;
-  if (!$('#rows')) return;
+  const R = S.ranking; if (!$('#rows')) return;
   if (!R) { $('#rows').innerHTML = '<p class="empty">Memuat…</p>'; return; }
-  const jc = S.cfg.juri.length;
-  const filled = R.rows.reduce((a, r) => a + r.count, 0);
-  $('#sum').textContent = `Penilaian masuk: ${filled} dari ${R.total * jc} · diperbarui ${new Date(R.updated).toLocaleTimeString('id-ID')}`;
+  const jc = S.cfg.juri.length, filled = R.rows.reduce((a, r) => a + r.count, 0);
+  const rated = R.rows.filter((r) => r.count > 0), top = rated.length ? rated[0].avg : null;
+  $('#stats').innerHTML = `<div class="stat"><b>${rated.length}/${R.total}</b><small>Toko sudah dinilai</small></div>
+    <div class="stat"><b>${filled}/${R.total * jc}</b><small>Penilaian masuk</small></div>
+    <div class="stat"><b>${top === null ? '–' : fmt(top)}</b><small>Nilai tertinggi</small></div>`;
   const q = S.query.trim().toLowerCase();
+  const pods = q ? [] : R.rows.filter((r) => r.rank && r.rank <= 3).slice(0, 3);
+  const order = pods.length === 3 ? [pods[1], pods[0], pods[2]] : pods;
+  $('#pod').innerHTML = pods.length ? `<div class="podium">${order.map((r) => `<div class="pod p${r.rank}"><div class="m">#${r.rank}</div><div class="nm">${esc(r.store)}</div><div class="sc">${fmt(r.avg)}</div></div>`).join('')}</div>` : '';
+  $('#sum').textContent = `Diperbarui ${new Date(R.updated).toLocaleTimeString('id-ID')} · otomatis tiap 20 detik`;
   const rows = R.rows.filter((r) => !q || r.store.toLowerCase().includes(q));
   $('#rows').innerHTML = rows.length ? rows.map((r) => {
-    const open = S.open.has(r.store);
-    const rk = r.rank && r.rank <= 3 ? 'rk' + r.rank : '';
-    const detail = open ? `<div class="detail">${r.juri.length ? r.juri.map((j) => `
-        <div class="jl"><div><span>${esc(j.juri)}</span><span>${fmt(j.avg)}</span></div>
-        <div class="chips">${R.areas.map((a, k) => `<span>${esc(a)}: <b>${j.nilai[k] ?? '–'}</b></span>`).join('')}</div></div>`).join('')
-      : '<p class="empty" style="padding:8px 0">Belum ada nilai.</p>'}</div>` : '';
-    return `<div class="rrow"><button class="rhead" data-s="${esc(r.store)}">
-      <span class="rk ${rk}">${r.rank ?? '–'}</span><span class="rn">${esc(r.store)}</span>
+    const open = S.open.has(r.store), rk = r.rank && r.rank <= 3 ? 'rk' + r.rank : '';
+    const detail = open ? `<div class="detail">${r.juri.length ? r.juri.map((j) => `<div class="jl"><div><span>${esc(j.juri)}</span><span>${fmt(j.avg)}</span></div>
+      <div class="chips">${R.areas.map((a, k) => `<span>${esc(a)}: <b style="color:${scale(j.nilai[k])}">${j.nilai[k] ?? '–'}</b></span>`).join('')}</div></div>`).join('') : '<p class="empty" style="padding:8px 0">Belum ada nilai.</p>'}</div>` : '';
+    return `<div class="rrow"><button class="rhead" data-s="${esc(r.store)}"><span class="rk ${rk}">${r.rank ?? '–'}</span>
+      <span class="rm"><span class="rn">${esc(r.store)}</span><span class="rb"><i style="width:${r.avg ? r.avg * 10 : 0}%"></i></span></span>
       <span class="rc">${r.count}/${jc} juri</span><span class="rv">${r.avg === null ? '–' : fmt(r.avg)}</span></button>${detail}</div>`;
   }).join('') : '<p class="empty">Tidak ada toko yang cocok.</p>';
-  $('#rows').querySelectorAll('.rhead').forEach((b) => b.onclick = () => {
-    const s = b.dataset.s; S.open.has(s) ? S.open.delete(s) : S.open.add(s); updateRanking();
-  });
+  $('#rows').querySelectorAll('.rhead').forEach((b) => b.onclick = () => { const s = b.dataset.s; S.open.has(s) ? S.open.delete(s) : S.open.add(s); updateRanking(); });
 }
-
 function updateJuri() {
   const el = $('#prog'); if (!el) return;
   if (!S.ranking) { el.innerHTML = '<p class="empty">Memuat…</p>'; return; }
   const t = S.ranking.total;
-  el.innerHTML = S.ranking.progress.map((p) => `
-    <div class="prow"><div><span>${esc(p.name)}</span><span>${p.done}/${t}</span></div>
-    <div class="bar"><i style="width:${t ? p.done / t * 100 : 0}%"></i></div></div>`).join('');
+  el.innerHTML = S.ranking.progress.map((p) => `<div class="prow"><div><span>${esc(p.name)}</span><span>${p.done}/${t}</span></div><div class="bar"><i style="width:${t ? p.done / t * 100 : 0}%"></i></div></div>`).join('');
 }
 
-function downloadCsv() {
+/* ---------- Excel (.xlsx) ---------- */
+async function loadExcelJS() {
+  if (window.ExcelJS) return;
+  await new Promise((ok, no) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js'; s.onload = ok;
+    s.onerror = () => no(new Error('Gagal memuat pustaka Excel. Cek koneksi internet.')); document.head.appendChild(s);
+  });
+}
+async function downloadXlsx() {
   const R = S.ranking; if (!R) return toast('Data belum dimuat', true);
-  const q = (v) => '"' + String(v).replace(/"/g, '""') + '"';
-  const num = (n) => String(n).replace('.', ',');
-  const head = ['Peringkat', 'Toko', 'Rata-rata', 'Jumlah juri', ...S.cfg.juri];
-  const lines = [head.map(q).join(';')];
-  for (const r of R.rows) {
-    const per = S.cfg.juri.map((j) => { const x = r.juri.find((y) => y.juri === j); return x ? num(x.avg) : ''; });
-    lines.push([r.rank ?? '', q(r.store), r.avg === null ? '' : num(r.avg), r.count, ...per].join(';'));
-  }
-  const blob = new Blob(['\ufeff' + lines.join('\r\n')], {type: 'text/csv;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = 'ranking-lomba-toko.csv';
-  document.body.appendChild(a); a.click(); a.remove();
+  const btn = $('#xls'); btn.disabled = true; btn.textContent = 'Menyiapkan…';
+  try {
+    await loadExcelJS();
+    const wb = new ExcelJS.Workbook();
+    const style = (ws) => {
+      const r = ws.getRow(1); r.height = 26;
+      r.eachCell((c) => { c.font = {bold: true, color: {argb: 'FFFFFFFF'}}; c.fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: 'FF0A3D3A'}}; c.alignment = {vertical: 'middle', horizontal: 'center', wrapText: true}; });
+      ws.views = [{state: 'frozen', ySplit: 1}]; ws.autoFilter = {from: {row: 1, column: 1}, to: {row: 1, column: ws.columnCount}};
+    };
+    const ws = wb.addWorksheet('Ranking');
+    ws.columns = [{header: 'Peringkat', width: 11}, {header: 'Toko', width: 32}, {header: 'Rata-rata', width: 12}, {header: 'Juri yang menilai', width: 14}, ...S.cfg.juri.map((j) => ({header: j, width: 12}))];
+    const medal = {1: 'FFD4A017', 2: 'FF8D9AA3', 3: 'FFA9683A'};
+    for (const r of R.rows) {
+      const row = ws.addRow([r.rank ?? '', r.store, r.avg ?? '', r.count, ...S.cfg.juri.map((j) => (r.juri.find((y) => y.juri === j) || {}).avg ?? '')]);
+      row.eachCell((c, n) => { if (n !== 2) c.alignment = {horizontal: 'center'}; if (n === 3 || n > 4) c.numFmt = '0.00'; });
+      row.getCell(3).font = {bold: true};
+      if (r.rank && r.rank <= 3) row.getCell(1).fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: medal[r.rank]}}, row.getCell(1).font = {bold: true, color: {argb: 'FFFFFFFF'}};
+    }
+    style(ws);
+    const wd = wb.addWorksheet('Detail nilai');
+    wd.columns = [{header: 'Toko', width: 32}, {header: 'Juri', width: 16}, ...R.areas.map((a) => ({header: a, width: 16})), {header: 'Rata-rata juri', width: 14}];
+    for (const r of R.rows.slice().sort((a, b) => a.store.localeCompare(b.store, 'id', {numeric: true})))
+      for (const j of r.juri) { const row = wd.addRow([r.store, j.juri, ...R.areas.map((_, k) => j.nilai[k] ?? ''), j.avg]); row.eachCell((c, n) => { if (n > 2) c.alignment = {horizontal: 'center'}; }); row.getCell(R.areas.length + 3).numFmt = '0.00'; }
+    style(wd);
+    const buf = await wb.xlsx.writeBuffer();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    a.download = 'ranking-lomba-toko-' + new Date().toISOString().slice(0, 10) + '.xlsx';
+    document.body.appendChild(a); a.click(); a.remove(); toast('File Excel diunduh');
+  } catch (e) { toast(e.message, true); }
+  btn.disabled = false; btn.textContent = 'Excel';
 }
 
+function parseAccounts(lines) {
+  return lines.map((l) => l.trim()).filter(Boolean).map((l) => { const p = l.split(','); return {id: (p[0] || '').trim(), password: (p[1] || '').trim(), name: p.slice(2).join(',').trim()}; });
+}
 function renderSettings() {
   const c = S.cfg;
   $('#body').innerHTML = `
     <label for="s-title" style="margin-top:0">Judul lomba</label><input id="s-title" value="${esc(c.title)}">
     <label for="s-areas">Area penilaian (1 baris = 1 area)</label><textarea id="s-areas" style="min-height:120px">${esc(c.areas.join('\n'))}</textarea>
-    <label for="s-juri">Nama juri (1 baris = 1 juri)</label><textarea id="s-juri" style="min-height:120px">${esc(c.juri.join('\n'))}</textarea>
+    <label for="s-juri">Akun juri (1 baris = 1 juri, format: id, kata sandi, nama)</label><textarea id="s-juri" style="min-height:150px" spellcheck="false">${esc((c.accounts || []).map((a) => [a.id, a.password, a.name].join(', ')).join('\n'))}</textarea>
     <label for="s-stores">Daftar toko (1 baris = 1 toko)</label><textarea id="s-stores" style="min-height:220px">${esc(c.stores.join('\n'))}</textarea>
-    <p class="hint">Atur semuanya sebelum juri mulai menilai. Jangan mengubah nama toko, nama juri, atau jumlah area setelah ada nilai masuk, karena nilai terikat pada nama tersebut.</p>
-    <p class="err" id="serr"></p>
-    <button class="primary" id="ssave" style="width:100%;margin-top:8px">Simpan pengaturan</button>`;
+    <p class="hint">Atur semuanya sebelum juri mulai menilai. Jangan mengubah nama toko, nama juri (kolom ke-3), atau jumlah area setelah ada nilai masuk, karena nilai terikat pada nama tersebut.</p>
+    <p class="err" id="serr"></p><button class="primary" id="ssave" style="width:100%;margin-top:8px">Simpan pengaturan</button>`;
   $('#ssave').onclick = async () => {
-    const lines = (id) => $(id).value.split('\n');
-    const btn = $('#ssave'); btn.disabled = true; btn.textContent = 'Menyimpan…';
+    const lines = (id) => $(id).value.split('\n'), btn = $('#ssave'); btn.disabled = true; btn.textContent = 'Menyimpan…';
     try {
-      const d = await api('saveConfig', {config: {title: $('#s-title').value, areas: lines('#s-areas'), juri: lines('#s-juri'), stores: lines('#s-stores')}});
-      S.cfg = d.config; document.title = S.cfg.title; toast('Pengaturan tersimpan'); refresh();
-      renderSettings();
+      const d = await api('saveConfig', {config: {title: $('#s-title').value, areas: lines('#s-areas'), accounts: parseAccounts(lines('#s-juri')), stores: lines('#s-stores')}});
+      S.cfg = d.config; document.title = S.cfg.title; toast('Pengaturan tersimpan'); refresh(); renderSettings();
     } catch (e) { $('#serr').textContent = e.message; btn.disabled = false; btn.textContent = 'Simpan pengaturan'; }
   };
 }
 
-/* ---------- Start ---------- */
 (async function init() {
-  if (!S.code) return showLogin();
+  if (!S.id || !S.pw) return showLogin();
   try { await bootstrap(); }
-  catch (e) {
-    if (e.status === 401) { store.del('lomba_code'); S.code = ''; showLogin('Kode tidak berlaku, masukkan lagi.'); }
-    else showLogin(e.message);
-  }
+  catch (e) { if (e.status === 401) { store.del('lomba_id'); store.del('lomba_pw'); S.id = ''; S.pw = ''; showLogin('Sesi tidak berlaku, masuk lagi.'); } else showLogin(e.message); }
 })();
 </script>
 </body>
